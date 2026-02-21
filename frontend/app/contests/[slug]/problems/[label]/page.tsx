@@ -10,7 +10,14 @@ import { LANGUAGE_DEFAULTS, DIFFICULTY_COLORS } from "@/lib/constants";
 import CodeEditor from "@/components/CodeEditor";
 import ResultsPanel from "@/components/ResultsPanel";
 import ContestTimer from "@/components/ContestTimer";
-import type { Language, Verdict, SubmissionUpdate, TestCaseResult } from "@/lib/types";
+import WarningDialog from "@/components/WarningDialog";
+import { useContestMonitor } from "@/hooks/useContestMonitor";
+import type {
+  Language,
+  Verdict,
+  SubmissionUpdate,
+  TestCaseResult,
+} from "@/lib/types";
 
 interface ContestProblemData {
   contestProblem: {
@@ -26,7 +33,12 @@ interface ContestProblemData {
       timeLimit: number;
       memoryLimit: number;
       constraints?: string;
-      testCases: { id: string; input: string; output: string; orderIndex: number }[];
+      testCases: {
+        id: string;
+        input: string;
+        output: string;
+        orderIndex: number;
+      }[];
     };
   };
   contestId: string;
@@ -48,7 +60,9 @@ export default function ContestProblemPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Results
-  const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(null);
+  const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(
+    null,
+  );
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
   const [compileOutput, setCompileOutput] = useState<string | null>(null);
@@ -59,6 +73,10 @@ export default function ContestProblemPage() {
   const [judging, setJudging] = useState(false);
 
   useContestRoom(data?.contestId ?? null);
+
+  // ── Contest Monitoring (tab switches, clipboard) ──────────────
+  const { terminated, dialogState, dismissDialog, tabSwitchCount } =
+    useContestMonitor(data?.contestId ?? null);
 
   useEffect(() => {
     async function fetch() {
@@ -97,13 +115,17 @@ export default function ContestProblemPage() {
       setTestsPassed(update.testsPassed || 0);
       setTestsTotal(update.testsTotal || 0);
     },
-    [activeSubmissionId]
+    [activeSubmissionId],
   );
 
   useSubmissionUpdates(handleSubmissionUpdate);
 
   const handleRun = async () => {
-    if (!user) { router.push("/login"); return; }
+    if (terminated) return; // Block actions when contest is terminated.
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     if (!data) return;
     setRunning(true);
     setJudging(true);
@@ -126,7 +148,11 @@ export default function ContestProblemPage() {
   };
 
   const handleSubmit = async () => {
-    if (!user) { router.push("/login"); return; }
+    if (terminated) return; // Block actions when contest is terminated.
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     if (!data) return;
     setSubmitting(true);
     setJudging(true);
@@ -162,7 +188,37 @@ export default function ContestProblemPage() {
   const problem = contestProblem.problem;
 
   return (
-    <div className="flex h-[calc(100vh-57px)]">
+    <div className="flex h-[calc(100vh-57px)] relative">
+      {/* Monitoring Warning / Termination Dialog */}
+      <WarningDialog
+        open={dialogState.open}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onDismiss={dismissDialog}
+      />
+
+      {/* Termination overlay — locks the entire UI */}
+      {terminated && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60">
+          <div className="rounded-xl border border-red-800 bg-zinc-950 p-8 text-center max-w-sm">
+            <p className="text-red-400 font-bold text-lg mb-2">
+              Contest Terminated
+            </p>
+            <p className="text-zinc-500 text-sm">
+              Your session has been locked. Redirecting…
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab switch indicator (visible during active contest) */}
+      {!terminated && tabSwitchCount > 0 && (
+        <div className="absolute top-2 right-4 z-30 rounded-full bg-amber-900/60 px-3 py-1 text-xs text-amber-300">
+          Tab switches: {tabSwitchCount}/3
+        </div>
+      )}
+
       {/* Left Panel */}
       <div className="w-[45%] border-r border-zinc-800 overflow-y-auto">
         <div className="px-6 py-4">
@@ -185,7 +241,9 @@ export default function ContestProblemPage() {
             {contestProblem.label}. {problem.title}
           </h1>
           <div className="flex gap-3 mb-4">
-            <span className={`text-sm font-medium ${DIFFICULTY_COLORS[problem.difficulty as keyof typeof DIFFICULTY_COLORS]}`}>
+            <span
+              className={`text-sm font-medium ${DIFFICULTY_COLORS[problem.difficulty as keyof typeof DIFFICULTY_COLORS]}`}
+            >
               {problem.difficulty}
             </span>
             <span className="text-sm text-zinc-500">
@@ -202,7 +260,9 @@ export default function ContestProblemPage() {
 
           {problem.constraints && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-zinc-300 mb-2">Constraints</h3>
+              <h3 className="text-sm font-semibold text-zinc-300 mb-2">
+                Constraints
+              </h3>
               <pre className="text-sm text-zinc-400 bg-zinc-900 p-3 rounded whitespace-pre-wrap">
                 {problem.constraints}
               </pre>
@@ -211,20 +271,29 @@ export default function ContestProblemPage() {
 
           {problem.testCases.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-zinc-300 mb-3">Examples</h3>
+              <h3 className="text-sm font-semibold text-zinc-300 mb-3">
+                Examples
+              </h3>
               {problem.testCases.map((tc, i) => (
-                <div key={tc.id} className="mb-4 rounded border border-zinc-800 overflow-hidden">
+                <div
+                  key={tc.id}
+                  className="mb-4 rounded border border-zinc-800 overflow-hidden"
+                >
                   <div className="bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 font-medium">
                     Example {i + 1}
                   </div>
                   <div className="grid grid-cols-2 divide-x divide-zinc-800">
                     <div className="p-3">
                       <p className="text-xs text-zinc-500 mb-1">Input</p>
-                      <pre className="text-sm text-zinc-300 whitespace-pre-wrap">{tc.input}</pre>
+                      <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
+                        {tc.input}
+                      </pre>
                     </div>
                     <div className="p-3">
                       <p className="text-xs text-zinc-500 mb-1">Output</p>
-                      <pre className="text-sm text-zinc-300 whitespace-pre-wrap">{tc.output}</pre>
+                      <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
+                        {tc.output}
+                      </pre>
                     </div>
                   </div>
                 </div>
@@ -246,6 +315,7 @@ export default function ContestProblemPage() {
             onSubmit={handleSubmit}
             running={running}
             submitting={submitting}
+            disabled={terminated}
           />
         </div>
         <div className="h-[35%] overflow-y-auto border-t border-zinc-800">

@@ -18,6 +18,8 @@ interface CodeEditorProps {
   onSubmit: () => void;
   running: boolean;
   submitting: boolean;
+  /** When true, disables all interactions (contest terminated). */
+  disabled?: boolean;
 }
 
 export default function CodeEditor({
@@ -29,6 +31,7 @@ export default function CodeEditor({
   onSubmit,
   running,
   submitting,
+  disabled = false,
 }: CodeEditorProps) {
   const editorRef = useRef<any>(null);
 
@@ -65,14 +68,14 @@ export default function CodeEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={onRun}
-            disabled={running || submitting}
+            disabled={running || submitting || disabled}
             className="rounded bg-zinc-700 px-4 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {running ? "Running..." : "▶ Run Code"}
           </button>
           <button
             onClick={onSubmit}
-            disabled={running || submitting}
+            disabled={running || submitting || disabled}
             className="rounded bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? "Submitting..." : "✓ Submit"}
@@ -101,6 +104,7 @@ export default function CodeEditor({
             renderWhitespace: "selection",
             bracketPairColorization: { enabled: true },
             padding: { top: 12 },
+            readOnly: disabled,
           }}
         />
       </div>
