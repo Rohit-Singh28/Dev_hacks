@@ -277,3 +277,18 @@ export interface RoadmapLeaderboardEntry {
   badge: RoadmapBadge;
 }
 
+// ─── Weekly Contest Types ────────────────────────────────────────────
+
+export interface WeeklyContest {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  prizes?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
