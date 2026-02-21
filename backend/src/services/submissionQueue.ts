@@ -219,6 +219,40 @@ async function processSubmission(job: Job<SubmissionJobData>): Promise<void> {
     await updateContestScore(contestId, userId, problemId);
   }
 
+  // Track daily activity for streak
+  if (mode === "submit") {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check if this is the first time solving this problem
+    let isNewSolve = false;
+    if (overallVerdict === "ACCEPTED") {
+      const previousAC = await prisma.submission.count({
+        where: {
+          userId,
+          problemId,
+          verdict: "ACCEPTED",
+          id: { not: submissionId },
+        },
+      });
+      isNewSolve = previousAC === 0;
+    }
+
+    await prisma.dailyActivity.upsert({
+      where: { userId_date: { userId, date: today } },
+      update: {
+        submissionCount: { increment: 1 },
+        ...(isNewSolve ? { solvedCount: { increment: 1 } } : {}),
+      },
+      create: {
+        userId,
+        date: today,
+        submissionCount: 1,
+        solvedCount: isNewSolve ? 1 : 0,
+      },
+    });
+  }
+
   // Emit real-time result
   emitSubmissionUpdate(userId, {
     submissionId,

@@ -258,6 +258,85 @@ Only consider alphanumeric characters, ignoring case.
 
   console.log("✅ Problems + test cases created");
 
+  // ─── Create Hints ─────────────────────────────────────────────────
+
+  // Two Sum hints
+  await prisma.hint.upsert({
+    where: { id: "hint-ts-1" },
+    update: {},
+    create: {
+      id: "hint-ts-1",
+      problemId: twoSum.id,
+      content:
+        "Think about what data structure would allow you to quickly look up whether a complement value exists.",
+      orderIdx: 0,
+    },
+  });
+
+  await prisma.hint.upsert({
+    where: { id: "hint-ts-2" },
+    update: {},
+    create: {
+      id: "hint-ts-2",
+      problemId: twoSum.id,
+      content:
+        "Use a hash map to store each number's index as you iterate. For each number, check if (target - number) already exists in the map.",
+      orderIdx: 1,
+    },
+  });
+
+  // Palindrome hints
+  await prisma.hint.upsert({
+    where: { id: "hint-pc-1" },
+    update: {},
+    create: {
+      id: "hint-pc-1",
+      problemId: palindrome.id,
+      content:
+        "First, filter out non-alphanumeric characters and convert everything to lowercase.",
+      orderIdx: 0,
+    },
+  });
+
+  await prisma.hint.upsert({
+    where: { id: "hint-pc-2" },
+    update: {},
+    create: {
+      id: "hint-pc-2",
+      problemId: palindrome.id,
+      content:
+        "Use two pointers — one at the start and one at the end — moving inward and comparing characters.",
+      orderIdx: 1,
+    },
+  });
+
+  // Fibonacci hints
+  await prisma.hint.upsert({
+    where: { id: "hint-fib-1" },
+    update: {},
+    create: {
+      id: "hint-fib-1",
+      problemId: fib.id,
+      content:
+        "A naive recursive approach will have exponential time complexity. Think about how to avoid redundant calculations.",
+      orderIdx: 0,
+    },
+  });
+
+  await prisma.hint.upsert({
+    where: { id: "hint-fib-2" },
+    update: {},
+    create: {
+      id: "hint-fib-2",
+      problemId: fib.id,
+      content:
+        "Use dynamic programming — either memoization (top-down) or tabulation (bottom-up) with just two variables.",
+      orderIdx: 1,
+    },
+  });
+
+  console.log("✅ Hints created");
+
   // ─── Create Contest ──────────────────────────────────────────────
 
   const now = new Date();

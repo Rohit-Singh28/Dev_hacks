@@ -5,14 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/authStore";
-import { useSubmissionUpdates, useContestRoom } from "@/lib/socket";
+import { useSubmissionUpdates } from "@/lib/socket";
 import { LANGUAGE_DEFAULTS, DIFFICULTY_COLORS } from "@/lib/constants";
 import CodeEditor from "@/components/CodeEditor";
 import ResultsPanel from "@/components/ResultsPanel";
-import ContestTimer from "@/components/ContestTimer";
-import WarningDialog from "@/components/WarningDialog";
-import CameraFeed from "@/components/CameraFeed";
-import { useContestMonitor } from "@/hooks/useContestMonitor";
 import type {
   Language,
   Verdict,
@@ -20,8 +16,8 @@ import type {
   TestCaseResult,
 } from "@/lib/types";
 
-interface ContestProblemData {
-  contestProblem: {
+interface RoomProblemData {
+  roomProblem: {
     id: string;
     label: string;
     points: number;
@@ -40,18 +36,22 @@ interface ContestProblemData {
         output: string;
         orderIndex: number;
       }[];
+      hints?: { id: string; content: string; orderIdx: number }[];
     };
   };
-  contestId: string;
+  roomId: string;
+  roomCode: string;
 }
 
-export default function ContestProblemPage() {
-  const { slug, label } = useParams<{ slug: string; label: string }>();
+export default function RoomProblemPage() {
+  const { roomId: roomCode, label } = useParams<{
+    roomId: string;
+    label: string;
+  }>();
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const [data, setData] = useState<ContestProblemData | null>(null);
-  const [contest, setContest] = useState<any>(null);
+  const [data, setData] = useState<RoomProblemData | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Editor state
@@ -73,37 +73,21 @@ export default function ContestProblemPage() {
   const [testsTotal, setTestsTotal] = useState(0);
   const [judging, setJudging] = useState(false);
 
-  useContestRoom(data?.contestId ?? null);
-
-  // ── Contest Monitoring (tab switches, clipboard, face detection) ──
-  const {
-    terminated,
-    dialogState,
-    dismissDialog,
-    tabSwitchCount,
-    screenViolationCount,
-    cameraStream,
-    faceDetected,
-    cameraError,
-  } = useContestMonitor(data?.contestId ?? null);
-
   useEffect(() => {
     async function fetch() {
       try {
-        const [problemRes, contestRes] = await Promise.all([
-          api.get(`/contests/${slug}/problems/${label}`),
-          api.get(`/contests/${slug}`),
-        ]);
-        setData(problemRes.data);
-        setContest(contestRes.data.contest);
+        const res = await api.get(
+          `/rooms/${String(roomCode).toUpperCase()}/problems/${label}`,
+        );
+        setData(res.data);
       } catch {
-        router.push(`/contests/${slug}`);
+        router.push(`/rooms/${roomCode}`);
       } finally {
         setLoading(false);
       }
     }
     fetch();
-  }, [slug, label, router]);
+  }, [roomCode, label, router]);
 
   const handleSubmissionUpdate = useCallback(
     (update: SubmissionUpdate) => {
@@ -130,7 +114,6 @@ export default function ContestProblemPage() {
   useSubmissionUpdates(handleSubmissionUpdate);
 
   const handleRun = async () => {
-    if (terminated) return; // Block actions when contest is terminated.
     if (!user) {
       router.push("/login");
       return;
@@ -143,10 +126,9 @@ export default function ContestProblemPage() {
     setCompileOutput(null);
     try {
       const { data: res } = await api.post("/submissions/run", {
-        problemId: data.contestProblem.problem.id,
+        problemId: data.roomProblem.problem.id,
         language,
         sourceCode: code,
-        contestId: data.contestId,
       });
       setActiveSubmissionId(res.submissionId);
     } catch (err: any) {
@@ -157,7 +139,6 @@ export default function ContestProblemPage() {
   };
 
   const handleSubmit = async () => {
-    if (terminated) return; // Block actions when contest is terminated.
     if (!user) {
       router.push("/login");
       return;
@@ -169,12 +150,14 @@ export default function ContestProblemPage() {
     setTestResults([]);
     setCompileOutput(null);
     try {
-      const { data: res } = await api.post("/submissions/submit", {
-        problemId: data.contestProblem.problem.id,
-        language,
-        sourceCode: code,
-        contestId: data.contestId,
-      });
+      const { data: res } = await api.post(
+        `/rooms/${String(roomCode).toUpperCase()}/submit`,
+        {
+          problemId: data.roomProblem.problem.id,
+          language,
+          sourceCode: code,
+        },
+      );
       setActiveSubmissionId(res.submissionId);
     } catch (err: any) {
       setSubmitting(false);
@@ -191,88 +174,44 @@ export default function ContestProblemPage() {
     );
   }
 
-  if (!data || !contest) return null;
+  if (!data) return null;
 
-  const { contestProblem } = data;
-  const problem = contestProblem.problem;
+  const { roomProblem } = data;
+  const problem = roomProblem.problem;
 
   return (
-    <div className="flex h-[calc(100vh-57px)] relative">
-      {/* Monitoring Warning / Termination Dialog */}
-      <WarningDialog
-        open={dialogState.open}
-        type={dialogState.type}
-        title={dialogState.title}
-        message={dialogState.message}
-        onDismiss={dismissDialog}
-      />
-
-      {/* Termination overlay — locks the entire UI */}
-      {terminated && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60">
-          <div className="rounded-xl border border-red-800 bg-zinc-950 p-8 text-center max-w-sm">
-            <p className="text-red-400 font-bold text-lg mb-2">
-              Contest Terminated
-            </p>
-            <p className="text-zinc-500 text-sm">
-              Your session has been locked. Redirecting…
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Tab switch indicator (visible during active contest) */}
-      {!terminated && tabSwitchCount > 0 && (
-        <div className="absolute top-2 right-4 z-30 rounded-full bg-amber-900/60 px-3 py-1 text-xs text-amber-300">
-          Tab switches: {tabSwitchCount}/3
-        </div>
-      )}
-
-      {/* Face-away violation indicator */}
-      {!terminated && screenViolationCount > 0 && (
-        <div className="absolute top-2 right-48 z-30 rounded-full bg-red-900/60 px-3 py-1 text-xs text-red-300">
-          Face-away: {screenViolationCount}/3
-        </div>
-      )}
-
-      {/* Camera feed (small floating preview) */}
-      {!terminated && (
-        <CameraFeed
-          stream={cameraStream}
-          faceDetected={faceDetected}
-          cameraError={cameraError}
-        />
-      )}
-
-      {/* Left Panel */}
+    <div className="flex h-[calc(100vh-57px)]">
+      {/* Left Panel — Problem Description */}
       <div className="w-[45%] border-r border-zinc-800 overflow-y-auto">
         <div className="px-6 py-4">
-          {/* Contest header */}
+          {/* Header */}
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
             <Link
-              href={`/contests/${slug}`}
+              href={`/rooms/${roomCode}`}
               className="text-sm text-zinc-400 hover:text-white transition-colors"
             >
-              ← {contest.title}
+              ← Back to Room
             </Link>
-            <ContestTimer
-              startTime={contest.startTime}
-              endTime={contest.endTime}
-              status={contest.status}
-            />
+            <span className="text-xs text-zinc-500 font-mono">
+              {data.roomCode}
+            </span>
           </div>
 
           <h1 className="text-xl font-bold text-white mb-2">
-            {contestProblem.label}. {problem.title}
+            {roomProblem.label}. {problem.title}
           </h1>
           <div className="flex gap-3 mb-4">
             <span
-              className={`text-sm font-medium ${DIFFICULTY_COLORS[problem.difficulty as keyof typeof DIFFICULTY_COLORS]}`}
+              className={`text-sm font-medium ${
+                DIFFICULTY_COLORS[
+                  problem.difficulty as keyof typeof DIFFICULTY_COLORS
+                ]
+              }`}
             >
               {problem.difficulty}
             </span>
             <span className="text-sm text-zinc-500">
-              {contestProblem.points} pts
+              {roomProblem.points} pts
             </span>
             <span className="text-sm text-zinc-500">
               Time: {problem.timeLimit}ms
@@ -325,10 +264,26 @@ export default function ContestProblemPage() {
               ))}
             </div>
           )}
+
+          {problem.hints && problem.hints.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-zinc-300 mb-2">
+                Hints
+              </h3>
+              {problem.hints.map((h) => (
+                <details key={h.id} className="mb-2">
+                  <summary className="text-sm text-blue-400 cursor-pointer hover:underline">
+                    Hint {h.orderIdx + 1}
+                  </summary>
+                  <p className="text-sm text-zinc-400 mt-1 ml-4">{h.content}</p>
+                </details>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Right Panel */}
+      {/* Right Panel — Code Editor & Results */}
       <div className="flex-1 flex flex-col">
         <div className="flex-1 min-h-0">
           <CodeEditor
@@ -340,7 +295,6 @@ export default function ContestProblemPage() {
             onSubmit={handleSubmit}
             running={running}
             submitting={submitting}
-            disabled={terminated}
           />
         </div>
         <div className="h-[35%] overflow-y-auto border-t border-zinc-800">

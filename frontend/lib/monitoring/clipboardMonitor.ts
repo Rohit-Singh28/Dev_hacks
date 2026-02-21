@@ -9,10 +9,18 @@
  *
  * The action counter is persisted in localStorage to survive page refreshes.
  *
+ * Threshold: Only clipboard content with >20 words OR >300 alphabetic
+ * characters is flagged. Small snippets (variable names, short lines) are
+ * allowed so normal coding isn't disrupted.
+ *
  * Behaviour:
- *   1st clipboard action  → onWarning() — show a warning, admin may review.
- *   2nd+ clipboard action → onTerminate() — auto-terminate the contest.
+ *   1st large clipboard action  → onWarning() — show a warning, admin may review.
+ *   2nd+ large clipboard action → onTerminate() — auto-terminate the contest.
  */
+
+/** Minimum thresholds — content below BOTH limits is ignored. */
+const WORD_THRESHOLD = 20;
+const ALPHA_THRESHOLD = 300;
 
 export interface ClipboardMonitorConfig {
   /** Unique key prefix for localStorage (scoped per contest). */
@@ -86,24 +94,81 @@ export class ClipboardMonitor {
 
   // ── Internal Handlers ────────────────────────────────────────────
 
+  // ── Content size helpers ──────────────────────────────────────
+
+  /**
+   * Returns true if `text` exceeds the safe threshold:
+   *   • more than 20 words, OR
+   *   • more than 300 alphabetic characters.
+   */
+  private static exceedsThreshold(text: string): boolean {
+    const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+    const alphaCount = (text.match(/[a-zA-Z]/g) || []).length;
+    return wordCount > WORD_THRESHOLD || alphaCount > ALPHA_THRESHOLD;
+  }
+
   /**
    * Handles native clipboard events (copy/paste/cut).
-   * Uses debounce to avoid double-counting with the keydown handler.
+   * Reads the clipboard content from the ClipboardEvent and only
+   * records if it exceeds the size threshold.
    */
-  private handleClipboardEvent(_e: Event): void {
-    this.debouncedRecord();
+  private handleClipboardEvent(e: Event): void {
+    const ce = e as ClipboardEvent;
+    let text = "";
+
+    if (ce.type === "paste") {
+      // For paste, read from the event's clipboardData.
+      text = ce.clipboardData?.getData("text/plain") ?? "";
+    } else {
+      // For copy/cut, read the current selection.
+      text = window.getSelection()?.toString() ?? "";
+    }
+
+    if (ClipboardMonitor.exceedsThreshold(text)) {
+      this.debouncedRecord();
+    }
   }
 
   /**
    * Keyboard shortcut handler — detects Ctrl/Cmd + C, V, X.
    * Captures in the capture phase so it fires before editors can swallow it.
+   *
+   * For copy/cut (C/X) we read window.getSelection synchronously.
+   * For paste (V) we attempt navigator.clipboard.readText (async); if
+   * that fails (permissions) we fall back to recording unconditionally
+   * since we can't inspect the content.
    */
   private handleKeydown(e: KeyboardEvent): void {
     const isModifier = e.ctrlKey || e.metaKey;
-    const isClipboardKey = ["c", "v", "x"].includes(e.key.toLowerCase());
+    const key = e.key.toLowerCase();
+    const isClipboardKey = ["c", "v", "x"].includes(key);
 
-    if (isModifier && isClipboardKey) {
-      this.debouncedRecord();
+    if (!isModifier || !isClipboardKey) return;
+
+    if (key === "c" || key === "x") {
+      // Copy / cut — read the selected text.
+      const text = window.getSelection()?.toString() ?? "";
+      if (ClipboardMonitor.exceedsThreshold(text)) {
+        this.debouncedRecord();
+      }
+    } else {
+      // Paste — try to read clipboard asynchronously.
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (ClipboardMonitor.exceedsThreshold(text)) {
+              this.debouncedRecord();
+            }
+          })
+          .catch(() => {
+            // Permission denied — can't inspect content; record defensively.
+            this.debouncedRecord();
+          });
+      } else {
+        // Clipboard API unavailable — record defensively.
+        this.debouncedRecord();
+      }
     }
   }
 

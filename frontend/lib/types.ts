@@ -19,6 +19,7 @@ export interface Problem {
   sampleOutput?: string;
   constraints?: string;
   testCases: VisibleTestCase[];
+  hints?: Hint[];
   _count?: { submissions: number };
 }
 
@@ -27,6 +28,30 @@ export interface VisibleTestCase {
   input: string;
   output: string;
   orderIndex: number;
+}
+
+export interface Hint {
+  id: string;
+  content: string;
+  orderIdx: number;
+}
+
+export interface Bookmark {
+  id: string;
+  problemId: string;
+  note?: string;
+  createdAt: string;
+  problem?: ProblemListItem;
+}
+
+export interface ProblemListItem {
+  id: string;
+  title: string;
+  slug: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  timeLimit: number;
+  memoryLimit: number;
+  _count: { submissions: number };
 }
 
 export type Language = "CPP" | "PYTHON" | "JAVA";
@@ -109,4 +134,79 @@ export interface SubmissionUpdate {
   memoryUsed?: number;
   compileOutput?: string;
   testResults?: TestCaseResult[];
+}
+
+// ─── User Profile / Stats Types ──────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  rating: number;
+  createdAt: string;
+}
+
+export interface UserStats {
+  totalSolved: number;
+  difficultyCounts: { EASY: number; MEDIUM: number; HARD: number };
+  totalSubmissions: number;
+  acceptedSubmissions: number;
+  acceptanceRate: number;
+  contestsParticipated: number;
+  languageStats: { language: string; count: number }[];
+}
+
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  totalActiveDays: number;
+  heatmap: { date: string; count: number; submissions: number }[];
+}
+
+export interface RecentSubmission {
+  id: string;
+  verdict: Verdict;
+  language: Language;
+  createdAt: string;
+  problem: { title: string; slug: string; difficulty: string };
+}
+
+// ─── Room Types ──────────────────────────────────────────────────────
+
+export interface Room {
+  id: string;
+  roomCode: string;
+  title: string;
+  hostId: string;
+  host?: { id: string; username: string };
+  status: "WAITING" | "ACTIVE" | "ENDED";
+  duration: number;
+  startTime?: string;
+  endTime?: string;
+  createdAt: string;
+  roomProblems: RoomProblem[];
+  roomParticipants?: RoomParticipantInfo[];
+  _count?: { roomParticipants: number; roomProblems: number };
+}
+
+export interface RoomProblem {
+  id: string;
+  label: string;
+  points: number;
+  orderIdx: number;
+  problem: {
+    id: string;
+    title: string;
+    slug: string;
+    difficulty: string;
+  };
+}
+
+export interface RoomParticipantInfo {
+  id: string;
+  userId: string;
+  score: number;
+  penalty: number;
+  rank?: number;
+  joinedAt: string;
+  user: { id: string; username: string; rating: number };
 }

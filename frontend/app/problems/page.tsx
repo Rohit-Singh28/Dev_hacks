@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/lib/authStore";
 import { DIFFICULTY_COLORS } from "@/lib/constants";
 
 interface ProblemListItem {
@@ -16,15 +17,22 @@ interface ProblemListItem {
 }
 
 export default function ProblemsPage() {
+  const { user } = useAuthStore();
   const [problems, setProblems] = useState<ProblemListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
+  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [showBookmarked, setShowBookmarked] = useState(false);
 
+  // Fetch problems
   useEffect(() => {
-    async function fetch() {
+    async function fetchProblems() {
       try {
         const params: any = {};
         if (filter !== "ALL") params.difficulty = filter;
+        if (search.trim()) params.search = search.trim();
         const { data } = await api.get("/problems", { params });
         setProblems(data.problems);
       } catch (err) {
@@ -33,11 +41,59 @@ export default function ProblemsPage() {
         setLoading(false);
       }
     }
-    fetch();
-  }, [filter]);
+    fetchProblems();
+  }, [filter, search]);
+
+  // Fetch solved & bookmarked IDs for logged-in user
+  useEffect(() => {
+    if (!user) {
+      setSolvedIds(new Set());
+      setBookmarkedIds(new Set());
+      return;
+    }
+    async function fetchUserData() {
+      try {
+        const [solvedRes, bookmarkedRes] = await Promise.all([
+          api.get("/users/solved"),
+          api.get("/users/bookmarked-ids"),
+        ]);
+        setSolvedIds(new Set(solvedRes.data.solvedProblemIds));
+        setBookmarkedIds(new Set(bookmarkedRes.data.bookmarkedProblemIds));
+      } catch {
+        // Silently ignore if not logged in
+      }
+    }
+    fetchUserData();
+  }, [user]);
+
+  const toggleBookmark = async (problemId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+
+    try {
+      const { data } = await api.post("/bookmarks/toggle", { problemId });
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        if (data.bookmarked) {
+          next.add(problemId);
+        } else {
+          next.delete(problemId);
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+    }
+  };
+
+  const filteredProblems = showBookmarked
+    ? problems.filter((p) => bookmarkedIds.has(p.id))
+    : problems;
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Problems</h1>
         <div className="flex gap-2">
@@ -57,27 +113,131 @@ export default function ProblemsPage() {
         </div>
       </div>
 
+      {/* Search and Bookmark Filter */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search problems..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 pl-10 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none"
+          />
+        </div>
+        {user && (
+          <button
+            onClick={() => setShowBookmarked(!showBookmarked)}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
+              showBookmarked
+                ? "border-yellow-600 bg-yellow-600/10 text-yellow-400"
+                : "border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
+            }`}
+          >
+            <svg
+              className="h-4 w-4"
+              fill={showBookmarked ? "currentColor" : "none"}
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              />
+            </svg>
+            Bookmarks
+          </button>
+        )}
+      </div>
+
+      {/* Stats Bar */}
+      {user && solvedIds.size > 0 && (
+        <div className="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+          <span>
+            Solved:{" "}
+            <span className="text-green-400 font-medium">{solvedIds.size}</span>
+          </span>
+          <span>
+            Bookmarked:{" "}
+            <span className="text-yellow-400 font-medium">
+              {bookmarkedIds.size}
+            </span>
+          </span>
+        </div>
+      )}
+
       {loading ? (
-        <p className="text-zinc-500">Loading problems...</p>
+        <div className="flex items-center justify-center py-12">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-blue-500" />
+        </div>
       ) : (
         <div className="border border-zinc-800 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-zinc-900 text-zinc-400">
+                <th className="text-left px-4 py-3 font-medium w-10">Status</th>
                 <th className="text-left px-4 py-3 font-medium">Title</th>
                 <th className="text-left px-4 py-3 font-medium">Difficulty</th>
                 <th className="text-left px-4 py-3 font-medium">Time Limit</th>
                 <th className="text-right px-4 py-3 font-medium">
                   Submissions
                 </th>
+                {user && (
+                  <th className="text-center px-4 py-3 font-medium w-10">
+                    <svg
+                      className="h-4 w-4 mx-auto text-zinc-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                      />
+                    </svg>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {problems.map((p) => (
+              {filteredProblems.map((p) => (
                 <tr
                   key={p.id}
                   className="hover:bg-zinc-900/50 transition-colors"
                 >
+                  <td className="px-4 py-3 text-center">
+                    {solvedIds.has(p.id) ? (
+                      <svg
+                        className="h-4 w-4 text-green-500 mx-auto"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    ) : (
+                      <span className="h-4 w-4 block mx-auto" />
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <Link
                       href={`/problems/${p.slug}`}
@@ -99,15 +259,50 @@ export default function ProblemsPage() {
                   <td className="px-4 py-3 text-right text-zinc-400">
                     {p._count.submissions}
                   </td>
+                  {user && (
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={(e) => toggleBookmark(p.id, e)}
+                        className="p-1 rounded hover:bg-zinc-800 transition-colors"
+                        title={
+                          bookmarkedIds.has(p.id)
+                            ? "Remove bookmark"
+                            : "Bookmark problem"
+                        }
+                      >
+                        <svg
+                          className={`h-4 w-4 ${
+                            bookmarkedIds.has(p.id)
+                              ? "text-yellow-400"
+                              : "text-zinc-600 hover:text-zinc-400"
+                          }`}
+                          fill={
+                            bookmarkedIds.has(p.id) ? "currentColor" : "none"
+                          }
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                          />
+                        </svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
-              {problems.length === 0 && (
+              {filteredProblems.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={user ? 6 : 5}
                     className="px-4 py-8 text-center text-zinc-500"
                   >
-                    No problems found.
+                    {showBookmarked
+                      ? "No bookmarked problems yet."
+                      : "No problems found."}
                   </td>
                 </tr>
               )}
