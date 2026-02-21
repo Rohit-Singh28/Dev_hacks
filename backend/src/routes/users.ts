@@ -109,9 +109,27 @@ router.get(
 
 router.get(
   "/streak",
-  authMiddleware,
+  optionalAuth,
   async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.userId;
+    // Support looking up by username query param, or fall back to logged-in user
+    let userId: string | null = null;
+
+    if (req.query.username) {
+      const targetUser = await prisma.user.findUnique({
+        where: { username: String(req.query.username) },
+        select: { id: true },
+      });
+      if (!targetUser) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+      userId = targetUser.id;
+    } else if (req.user) {
+      userId = req.user.userId;
+    } else {
+      res.status(401).json({ error: "Username or auth required" });
+      return;
+    }
 
     // Get all daily activities, ordered by date descending
     const activities = await prisma.dailyActivity.findMany({

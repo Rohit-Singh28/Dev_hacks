@@ -46,19 +46,26 @@ export default function ProfilePage() {
     fetchProfile();
   }, [username]);
 
-  // Fetch streak data if viewing own profile
+  // Fetch streak data for the profile user
   useEffect(() => {
-    if (!currentUser || currentUser.username !== username) return;
     async function fetchStreak() {
       try {
-        const { data } = await api.get("/users/streak");
+        const { data } = await api.get("/users/streak", {
+          params: { username },
+        });
         setStreak(data);
       } catch {
-        // Ignore
+        // If no streak data, set defaults so heatmap still renders
+        setStreak({
+          currentStreak: 0,
+          longestStreak: 0,
+          totalActiveDays: 0,
+          heatmap: [],
+        });
       }
     }
     fetchStreak();
-  }, [currentUser, username]);
+  }, [username]);
 
   if (loading) {
     return (
@@ -295,19 +302,41 @@ export default function ProfilePage() {
       </div>
 
       {/* Activity Heatmap */}
-      {streak && streak.heatmap.length > 0 && (
-        <div className="rounded-lg border border-zinc-800 p-5 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-zinc-300">
-              Activity Heatmap
-            </h3>
-            <span className="text-xs text-zinc-500">
-              {streak.totalActiveDays} active days in the past year
+      <div className="rounded-lg border border-zinc-800 p-5 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+            <svg
+              className="h-4 w-4 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            {streak?.totalActiveDays ?? 0} submissions in the last year
+          </h3>
+          <div className="flex items-center gap-4 text-xs text-zinc-500">
+            <span>
+              Total active days:{" "}
+              <span className="text-zinc-300 font-medium">
+                {streak?.totalActiveDays ?? 0}
+              </span>
+            </span>
+            <span>
+              Max streak:{" "}
+              <span className="text-orange-400 font-medium">
+                {streak?.longestStreak ?? 0}
+              </span>
             </span>
           </div>
-          <ActivityHeatmap data={streak.heatmap} />
         </div>
-      )}
+        <ActivityHeatmap data={streak?.heatmap ?? []} />
+      </div>
 
       {/* Recent Submissions */}
       <div className="rounded-lg border border-zinc-800 overflow-hidden">
@@ -422,34 +451,47 @@ function ActivityHeatmap({
 }: {
   data: { date: string; count: number; submissions: number }[];
 }) {
-  // Build a map of date -> count
-  const dateMap = new Map<string, number>();
+  // Build a map of date string -> count
+  const dateMap = new Map<string, { count: number; submissions: number }>();
   data.forEach((d) => {
     const dateStr = new Date(d.date).toISOString().split("T")[0];
-    dateMap.set(dateStr, d.count);
+    dateMap.set(dateStr, { count: d.count, submissions: d.submissions });
   });
 
   // Generate last 365 days
-  const days: { date: string; count: number }[] = [];
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const allDays: {
+    date: Date;
+    dateStr: string;
+    count: number;
+    submissions: number;
+  }[] = [];
   for (let i = 364; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-    days.push({ date: dateStr, count: dateMap.get(dateStr) || 0 });
+    const entry = dateMap.get(dateStr);
+    allDays.push({
+      date: d,
+      dateStr,
+      count: entry?.count ?? 0,
+      submissions: entry?.submissions ?? 0,
+    });
   }
 
-  // Group into weeks (columns)
-  const weeks: { date: string; count: number }[][] = [];
-  let currentWeek: { date: string; count: number }[] = [];
+  // Group into weeks (columns of 7 rows). Each column = 1 week, row 0=Sun, row 6=Sat
+  const weeks: ((typeof allDays)[number] | null)[][] = [];
+  let currentWeek: ((typeof allDays)[number] | null)[] = [];
 
-  // Pad the first week to start on Sunday
-  const firstDay = new Date(days[0].date).getDay();
-  for (let i = 0; i < firstDay; i++) {
-    currentWeek.push({ date: "", count: -1 }); // placeholder
+  // Pad the first week so it starts on Sunday (day 0)
+  const firstDayOfWeek = allDays[0].date.getDay(); // 0=Sun
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    currentWeek.push(null);
   }
 
-  for (const day of days) {
+  for (const day of allDays) {
     currentWeek.push(day);
     if (currentWeek.length === 7) {
       weeks.push(currentWeek);
@@ -457,19 +499,16 @@ function ActivityHeatmap({
     }
   }
   if (currentWeek.length > 0) {
+    // Pad the last week
+    while (currentWeek.length < 7) {
+      currentWeek.push(null);
+    }
     weeks.push(currentWeek);
   }
 
-  const getColor = (count: number) => {
-    if (count < 0) return "bg-transparent";
-    if (count === 0) return "bg-zinc-800";
-    if (count === 1) return "bg-green-900";
-    if (count <= 3) return "bg-green-700";
-    if (count <= 5) return "bg-green-500";
-    return "bg-green-400";
-  };
-
-  const monthLabels = [
+  // Calculate month label positions
+  const monthLabels: { label: string; colIndex: number }[] = [];
+  const monthNames = [
     "Jan",
     "Feb",
     "Mar",
@@ -483,36 +522,124 @@ function ActivityHeatmap({
     "Nov",
     "Dec",
   ];
+  let lastMonth = -1;
+
+  for (let wi = 0; wi < weeks.length; wi++) {
+    // Find the first real day in this week
+    const firstDay = weeks[wi].find((d) => d !== null);
+    if (firstDay) {
+      const month = firstDay.date.getMonth();
+      if (month !== lastMonth) {
+        monthLabels.push({ label: monthNames[month], colIndex: wi });
+        lastMonth = month;
+      }
+    }
+  }
+
+  const CELL_SIZE = 14; // px
+  const CELL_GAP = 3; // px
+  const COL_WIDTH = CELL_SIZE + CELL_GAP;
+  const DAY_LABEL_WIDTH = 32;
+  const MONTH_LABEL_HEIGHT = 20;
+
+  const totalWidth = DAY_LABEL_WIDTH + weeks.length * COL_WIDTH;
+  const totalHeight = MONTH_LABEL_HEIGHT + 7 * (CELL_SIZE + CELL_GAP);
+
+  const getColor = (count: number): string => {
+    if (count === 0) return "#27272a"; // zinc-800
+    if (count === 1) return "#14532d"; // green-900
+    if (count === 2) return "#166534"; // green-800
+    if (count <= 4) return "#15803d"; // green-700
+    if (count <= 6) return "#22c55e"; // green-500
+    return "#4ade80"; // green-400
+  };
+
+  const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-0.75">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-0.75">
-            {week.map((day, di) => (
-              <div
-                key={`${wi}-${di}`}
-                className={`h-3 w-3 rounded-sm ${getColor(day.count)}`}
-                title={
-                  day.date
-                    ? `${day.date}: ${day.count} problem${day.count !== 1 ? "s" : ""} solved`
-                    : ""
-                }
-              />
-            ))}
-          </div>
+    <div className="overflow-x-auto pb-2">
+      <svg width={totalWidth} height={totalHeight + 8} className="block">
+        {/* Month labels */}
+        {monthLabels.map((ml, i) => (
+          <text
+            key={i}
+            x={DAY_LABEL_WIDTH + ml.colIndex * COL_WIDTH}
+            y={MONTH_LABEL_HEIGHT - 4}
+            className="fill-zinc-500"
+            fontSize={11}
+            fontFamily="system-ui, sans-serif"
+          >
+            {ml.label}
+          </text>
         ))}
-      </div>
-      <div className="flex items-center gap-2 mt-3 text-xs text-zinc-500">
-        <span>Less</span>
-        <div className="flex gap-1">
-          <div className="h-3 w-3 rounded-sm bg-zinc-800" />
-          <div className="h-3 w-3 rounded-sm bg-green-900" />
-          <div className="h-3 w-3 rounded-sm bg-green-700" />
-          <div className="h-3 w-3 rounded-sm bg-green-500" />
-          <div className="h-3 w-3 rounded-sm bg-green-400" />
+
+        {/* Day-of-week labels */}
+        {dayLabels.map((label, di) =>
+          label ? (
+            <text
+              key={di}
+              x={0}
+              y={
+                MONTH_LABEL_HEIGHT + di * (CELL_SIZE + CELL_GAP) + CELL_SIZE - 2
+              }
+              className="fill-zinc-500"
+              fontSize={10}
+              fontFamily="system-ui, sans-serif"
+            >
+              {label}
+            </text>
+          ) : null,
+        )}
+
+        {/* Heatmap cells */}
+        {weeks.map((week, wi) =>
+          week.map((day, di) => {
+            if (!day) return null;
+            return (
+              <rect
+                key={`${wi}-${di}`}
+                x={DAY_LABEL_WIDTH + wi * COL_WIDTH}
+                y={MONTH_LABEL_HEIGHT + di * (CELL_SIZE + CELL_GAP)}
+                width={CELL_SIZE}
+                height={CELL_SIZE}
+                rx={3}
+                ry={3}
+                fill={getColor(day.count)}
+                className="transition-colors hover:stroke-zinc-400 hover:stroke-1"
+              >
+                <title>
+                  {day.dateStr}: {day.count} solved, {day.submissions}{" "}
+                  submissions
+                </title>
+              </rect>
+            );
+          }),
+        )}
+      </svg>
+
+      {/* Legend */}
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs text-zinc-500">
+          Learn how we count contributions
+        </span>
+        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <span>Less</span>
+          {[
+            "#27272a",
+            "#14532d",
+            "#166534",
+            "#15803d",
+            "#22c55e",
+            "#4ade80",
+          ].map((color, i) => (
+            <div
+              key={i}
+              className="h-3 w-3 rounded-sm"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          <span>More</span>
         </div>
-        <span>More</span>
       </div>
     </div>
   );
