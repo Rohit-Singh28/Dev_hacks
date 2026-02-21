@@ -46,6 +46,67 @@ interface ContestProblemData {
   contestId: string;
 }
 
+/* ─────────────────────────────────────────────
+   Difficulty badge
+───────────────────────────────────────────── */
+function DifficultyBadge({ difficulty }: { difficulty: string }) {
+  const map: Record<string, string> = {
+    EASY: "bg-emerald-900/50 text-emerald-400 border border-emerald-800/60",
+    MEDIUM: "bg-amber-900/50   text-amber-400   border border-amber-800/60",
+    HARD: "bg-red-900/50     text-red-400     border border-red-800/60",
+  };
+  const label: Record<string, string> = {
+    EASY: "Easy",
+    MEDIUM: "Medium",
+    HARD: "Hard",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${map[difficulty] ?? map.HARD}`}
+    >
+      {label[difficulty] ?? difficulty}
+    </span>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Violation pill
+───────────────────────────────────────────── */
+function ViolationPill({
+  count,
+  label,
+  color,
+}: {
+  count: number;
+  label: string;
+  color: "amber" | "red" | "purple" | "orange";
+}) {
+  const map = {
+    amber: "bg-amber-900/50  border-amber-800/50  text-amber-300",
+    red: "bg-red-900/50    border-red-800/50    text-red-300",
+    purple: "bg-violet-900/50 border-violet-800/50 text-violet-300",
+    orange: "bg-orange-900/50 border-orange-800/50 text-orange-300",
+  };
+  return (
+    <div
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] ${map[color]}`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          color === "amber"
+            ? "bg-amber-400"
+            : color === "red"
+              ? "bg-red-400"
+              : color === "purple"
+                ? "bg-violet-400"
+                : "bg-orange-400"
+        }`}
+      />
+      {label}: {count}/3
+    </div>
+  );
+}
+
 export default function ContestProblemPage() {
   const { slug, label } = useParams<{ slug: string; label: string }>();
   const router = useRouter();
@@ -55,13 +116,11 @@ export default function ContestProblemPage() {
   const [contest, setContest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Editor state
   const [language, setLanguage] = useState<Language>("CPP");
   const [code, setCode] = useState(LANGUAGE_DEFAULTS.CPP);
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Results
   const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(
     null,
   );
@@ -76,7 +135,6 @@ export default function ContestProblemPage() {
 
   useContestRoom(data?.contestId ?? null);
 
-  // ── Contest Monitoring (tab switches, clipboard, face detection, fullscreen, screen capture) ──
   const {
     terminated,
     dialogState,
@@ -134,7 +192,7 @@ export default function ContestProblemPage() {
   useSubmissionUpdates(handleSubmissionUpdate);
 
   const handleRun = async () => {
-    if (terminated) return; // Block actions when contest is terminated.
+    if (terminated) return;
     if (!user) {
       router.push("/login");
       return;
@@ -161,7 +219,7 @@ export default function ContestProblemPage() {
   };
 
   const handleSubmit = async () => {
-    if (terminated) return; // Block actions when contest is terminated.
+    if (terminated) return;
     if (!user) {
       router.push("/login");
       return;
@@ -187,10 +245,11 @@ export default function ContestProblemPage() {
     }
   };
 
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-57px)]">
-        <p className="text-zinc-500">Loading...</p>
+      <div className="flex h-[calc(100vh-57px)] items-center justify-center bg-[#0e0e0e]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-700 border-t-zinc-300" />
       </div>
     );
   }
@@ -202,8 +261,8 @@ export default function ContestProblemPage() {
 
   return (
     <ContestEntryGate contestId={data.contestId}>
-      <div className="flex h-[calc(100vh-57px)] relative">
-        {/* Monitoring Warning / Termination Dialog */}
+      <div className="relative flex h-[calc(100vh-57px)] bg-[#0e0e0e]">
+        {/* ── Warning / termination dialog ── */}
         <WarningDialog
           open={dialogState.open}
           type={dialogState.type}
@@ -212,49 +271,70 @@ export default function ContestProblemPage() {
           onDismiss={dismissDialog}
         />
 
-        {/* Termination overlay — locks the entire UI */}
+        {/* ── Termination overlay ── */}
         {terminated && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60">
-            <div className="rounded-xl border border-red-800 bg-zinc-950 p-8 text-center max-w-sm">
-              <p className="text-red-400 font-bold text-lg mb-2">
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="rounded-2xl border border-red-900/60 bg-zinc-950/90 px-10 py-8 text-center shadow-2xl">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-900/40 border border-red-800/50">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
+                </svg>
+              </div>
+              <p className="text-base font-semibold text-red-400 mb-1">
                 Contest Terminated
               </p>
-              <p className="text-zinc-500 text-sm">
+              <p className="font-mono text-xs text-zinc-600">
                 Your session has been locked. Redirecting…
               </p>
             </div>
           </div>
         )}
 
-        {/* Tab switch indicator (visible during active contest) */}
-        {!terminated && tabSwitchCount > 0 && (
-          <div className="absolute top-2 right-4 z-30 rounded-full bg-amber-900/60 px-3 py-1 text-xs text-amber-300">
-            Tab switches: {tabSwitchCount}/3
+        {/* ── Violation pills (top-right cluster) ── */}
+        {!terminated && (
+          <div className="absolute top-3 right-4 z-30 flex flex-col items-end gap-1.5">
+            {tabSwitchCount > 0 && (
+              <ViolationPill
+                count={tabSwitchCount}
+                label="Tab switches"
+                color="amber"
+              />
+            )}
+            {screenViolationCount > 0 && (
+              <ViolationPill
+                count={screenViolationCount}
+                label="Face-away"
+                color="red"
+              />
+            )}
+            {fullscreenViolationCount > 0 && (
+              <ViolationPill
+                count={fullscreenViolationCount}
+                label="Fullscreen exits"
+                color="purple"
+              />
+            )}
+            {screenCaptureViolationCount > 0 && (
+              <ViolationPill
+                count={screenCaptureViolationCount}
+                label="Screen capture"
+                color="orange"
+              />
+            )}
           </div>
         )}
 
-        {/* Face-away violation indicator */}
-        {!terminated && screenViolationCount > 0 && (
-          <div className="absolute top-2 right-48 z-30 rounded-full bg-red-900/60 px-3 py-1 text-xs text-red-300">
-            Face-away: {screenViolationCount}/3
-          </div>
-        )}
-
-        {/* Fullscreen violation indicator */}
-        {!terminated && fullscreenViolationCount > 0 && (
-          <div className="absolute top-10 right-4 z-30 rounded-full bg-purple-900/60 px-3 py-1 text-xs text-purple-300">
-            Fullscreen exits: {fullscreenViolationCount}/3
-          </div>
-        )}
-
-        {/* Screen capture violation indicator */}
-        {!terminated && screenCaptureViolationCount > 0 && (
-          <div className="absolute top-10 right-48 z-30 rounded-full bg-orange-900/60 px-3 py-1 text-xs text-orange-300">
-            Screen capture: {screenCaptureViolationCount}/3
-          </div>
-        )}
-
-        {/* Camera feed (small floating preview) */}
+        {/* ── Camera feed ── */}
         {!terminated && (
           <CameraFeed
             stream={cameraStream}
@@ -263,16 +343,31 @@ export default function ContestProblemPage() {
           />
         )}
 
-        {/* Left Panel */}
-        <div className="w-[45%] border-r border-zinc-800 overflow-y-auto">
-          <div className="px-6 py-4">
-            {/* Contest header */}
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
+        {/* ════════════════════════════════════════
+            LEFT PANEL — Problem description
+        ════════════════════════════════════════ */}
+        <div className="w-[45%] overflow-y-auto border-r border-white/[0.06]">
+          <div className="px-7 py-5">
+            {/* Contest nav + timer */}
+            <div className="mb-5 flex items-center justify-between border-b border-white/[0.05] pb-4">
               <Link
                 href={`/contests/${slug}`}
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-600 transition-colors hover:text-zinc-300"
               >
-                ← {contest.title}
+                <svg
+                  className="h-3 w-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                {contest.title}
               </Link>
               <ContestTimer
                 startTime={contest.startTime}
@@ -281,75 +376,99 @@ export default function ContestProblemPage() {
               />
             </div>
 
-            <h1 className="text-xl font-bold text-white mb-2">
-              {contestProblem.label}. {problem.title}
-            </h1>
-            <div className="flex gap-3 mb-4">
-              <span
-                className={`text-sm font-medium ${DIFFICULTY_COLORS[problem.difficulty as keyof typeof DIFFICULTY_COLORS]}`}
-              >
-                {problem.difficulty}
+            {/* Problem title */}
+            <h1 className="mb-3 text-xl font-light tracking-tight text-zinc-100">
+              <span className="font-mono text-zinc-600">
+                {contestProblem.label}.&nbsp;
               </span>
-              <span className="text-sm text-zinc-500">
+              {problem.title}
+            </h1>
+
+            {/* Meta pills */}
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              <DifficultyBadge difficulty={problem.difficulty} />
+              <span className="inline-flex items-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 py-0.5 font-mono text-[11px] text-zinc-500">
                 {contestProblem.points} pts
               </span>
-              <span className="text-sm text-zinc-500">
-                Time: {problem.timeLimit}ms
+              <span className="inline-flex items-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 py-0.5 font-mono text-[11px] text-zinc-500">
+                {problem.timeLimit} ms
+              </span>
+              <span className="inline-flex items-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 py-0.5 font-mono text-[11px] text-zinc-500">
+                {problem.memoryLimit} MB
               </span>
             </div>
 
-            <pre className="whitespace-pre-wrap text-sm text-zinc-300 font-sans leading-relaxed mb-6">
+            {/* Description */}
+            <pre className="mb-7 whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-400">
               {problem.description}
             </pre>
 
+            {/* Constraints */}
             {problem.constraints && (
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-zinc-300 mb-2">
-                  Constraints
-                </h3>
-                <pre className="text-sm text-zinc-400 bg-zinc-900 p-3 rounded whitespace-pre-wrap">
+              <div className="mb-7">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-px w-4 bg-zinc-800" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                    Constraints
+                  </span>
+                </div>
+                <pre className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 font-mono text-xs text-zinc-400 whitespace-pre-wrap">
                   {problem.constraints}
                 </pre>
               </div>
             )}
 
+            {/* Examples */}
             {problem.testCases.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-zinc-300 mb-3">
-                  Examples
-                </h3>
-                {problem.testCases.map((tc, i) => (
-                  <div
-                    key={tc.id}
-                    className="mb-4 rounded border border-zinc-800 overflow-hidden"
-                  >
-                    <div className="bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 font-medium">
-                      Example {i + 1}
-                    </div>
-                    <div className="grid grid-cols-2 divide-x divide-zinc-800">
-                      <div className="p-3">
-                        <p className="text-xs text-zinc-500 mb-1">Input</p>
-                        <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
-                          {tc.input}
-                        </pre>
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="h-px w-4 bg-zinc-800" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                    Examples
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {problem.testCases.map((tc, i) => (
+                    <div
+                      key={tc.id}
+                      className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
+                    >
+                      <div className="border-b border-white/[0.05] px-4 py-2">
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                          Example {i + 1}
+                        </span>
                       </div>
-                      <div className="p-3">
-                        <p className="text-xs text-zinc-500 mb-1">Output</p>
-                        <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
-                          {tc.output}
-                        </pre>
+                      <div className="grid grid-cols-2 divide-x divide-white/[0.05]">
+                        <div className="px-4 py-3">
+                          <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-700">
+                            Input
+                          </p>
+                          <pre className="font-mono text-xs text-zinc-300 whitespace-pre-wrap">
+                            {tc.input}
+                          </pre>
+                        </div>
+                        <div className="px-4 py-3">
+                          <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-700">
+                            Output
+                          </p>
+                          <pre className="font-mono text-xs text-zinc-300 whitespace-pre-wrap">
+                            {tc.output}
+                          </pre>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Panel */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 min-h-0">
+        {/* ════════════════════════════════════════
+            RIGHT PANEL — Editor + Results
+        ════════════════════════════════════════ */}
+        <div className="flex flex-1 flex-col">
+          <div className="min-h-0 flex-1">
             <CodeEditor
               language={language}
               onLanguageChange={setLanguage}
@@ -362,7 +481,7 @@ export default function ContestProblemPage() {
               disabled={terminated}
             />
           </div>
-          <div className="h-[35%] overflow-y-auto border-t border-zinc-800">
+          <div className="h-[35%] overflow-y-auto border-t border-white/[0.06]">
             <ResultsPanel
               verdict={verdict}
               testResults={testResults}

@@ -23,6 +23,29 @@ import type {
   Submission,
 } from "@/lib/types";
 
+/* ─────────────────────────────────────────────
+   Difficulty badge
+───────────────────────────────────────────── */
+function DifficultyBadge({ difficulty }: { difficulty: string }) {
+  const map: Record<string, string> = {
+    EASY: "bg-emerald-900/50 text-emerald-400 border border-emerald-800/60",
+    MEDIUM: "bg-amber-900/50   text-amber-400   border border-amber-800/60",
+    HARD: "bg-red-900/50     text-red-400     border border-red-800/60",
+  };
+  const label: Record<string, string> = {
+    EASY: "Easy",
+    MEDIUM: "Medium",
+    HARD: "Hard",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${map[difficulty] ?? map.HARD}`}
+    >
+      {label[difficulty] ?? difficulty}
+    </span>
+  );
+}
+
 export default function ProblemDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
@@ -31,21 +54,15 @@ export default function ProblemDetailPage() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [userSubmissions, setUserSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Bookmark state
   const [bookmarked, setBookmarked] = useState(false);
-
-  // Hints state
   const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
 
-  // Editor state
   const [language, setLanguage] = useState<Language>("CPP");
   const [code, setCode] = useState(LANGUAGE_DEFAULTS.CPP);
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const isSubmitRef = useRef(false);
 
-  // Results state
   const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(
     null,
   );
@@ -59,24 +76,18 @@ export default function ProblemDetailPage() {
   const [testsTotal, setTestsTotal] = useState(0);
   const [judging, setJudging] = useState(false);
 
-  // AI Review state
   const [aiReview, setAiReview] = useState<string | null>(null);
   const [aiReviewLoading, setAiReviewLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "description" | "submissions" | "review"
+  >("description");
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<"description" | "submissions" | "review">(
-    "description",
-  );
-
-  // Fetch problem
   useEffect(() => {
     async function fetch() {
       try {
         const { data } = await api.get(`/problems/${slug}`);
         setProblem(data.problem);
         setUserSubmissions(data.userSubmissions || []);
-
-        // Check bookmark status if logged in
         if (user) {
           try {
             const bookmarkRes = await api.get(
@@ -84,7 +95,7 @@ export default function ProblemDetailPage() {
             );
             setBookmarked(bookmarkRes.data.bookmarked);
           } catch {
-            // Ignore bookmark check errors
+            /* ignore */
           }
         }
       } catch {
@@ -96,7 +107,6 @@ export default function ProblemDetailPage() {
     fetch();
   }, [slug, router, user]);
 
-  // Auto-trigger AI review after judging
   const triggerAiReview = useCallback(
     async (verdictVal: string, results: TestCaseResult[]) => {
       if (!problem) return;
@@ -133,7 +143,6 @@ export default function ProblemDetailPage() {
     [problem, code, language],
   );
 
-  // ─── Submission Handling ───────────────────────────────────────────
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const triggerAiReviewRef = useRef(triggerAiReview);
   triggerAiReviewRef.current = triggerAiReview;
@@ -147,16 +156,18 @@ export default function ProblemDetailPage() {
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  // Apply final results to UI
   const applyResults = useCallback(
-    (v: Verdict, extra: {
-      testResults?: TestCaseResult[];
-      compileOutput?: string | null;
-      executionTime?: number | null;
-      memoryUsed?: number | null;
-      testsPassed?: number;
-      testsTotal?: number;
-    }) => {
+    (
+      v: Verdict,
+      extra: {
+        testResults?: TestCaseResult[];
+        compileOutput?: string | null;
+        executionTime?: number | null;
+        memoryUsed?: number | null;
+        testsPassed?: number;
+        testsTotal?: number;
+      },
+    ) => {
       stopPolling();
       setVerdict(v);
       setTestResults(extra.testResults || []);
@@ -172,7 +183,6 @@ export default function ProblemDetailPage() {
     [stopPolling],
   );
 
-  // Poll GET /submissions/:id until verdict is final
   const startPolling = useCallback(
     (subId: string) => {
       stopPolling();
@@ -189,17 +199,16 @@ export default function ProblemDetailPage() {
               testsPassed: s.testsPassed,
               testsTotal: s.testsTotal,
             });
-            if (isSubmitRef.current) {
-              triggerAiReviewRef.current(s.verdict, []);
-            }
+            if (isSubmitRef.current) triggerAiReviewRef.current(s.verdict, []);
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }, 2000);
     },
     [stopPolling, applyResults],
   );
 
-  // WebSocket bonus — if it delivers faster than polling, great
   const handleSubmissionUpdate = useCallback(
     (update: SubmissionUpdate) => {
       if (update.submissionId !== activeSubIdRef.current) return;
@@ -216,20 +225,22 @@ export default function ProblemDetailPage() {
         testsPassed: update.testsPassed,
         testsTotal: update.testsTotal,
       });
-      if (isSubmitRef.current) {
-        triggerAiReviewRef.current(update.verdict as string, update.testResults || []);
-      }
+      if (isSubmitRef.current)
+        triggerAiReviewRef.current(
+          update.verdict as string,
+          update.testResults || [],
+        );
     },
     [applyResults],
   );
-
   useSubmissionUpdates(handleSubmissionUpdate);
 
-  // Run Code
   const handleRun = async () => {
-    if (!user) { router.push("/login"); return; }
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     if (!problem) return;
-
     stopPolling();
     setRunning(true);
     setJudging(true);
@@ -237,10 +248,11 @@ export default function ProblemDetailPage() {
     setVerdict(null);
     setTestResults([]);
     setCompileOutput(null);
-
     try {
       const { data } = await api.post("/submissions/run", {
-        problemId: problem.id, language, sourceCode: code,
+        problemId: problem.id,
+        language,
+        sourceCode: code,
       });
       setActiveSubmissionId(data.submissionId);
       activeSubIdRef.current = data.submissionId;
@@ -252,11 +264,12 @@ export default function ProblemDetailPage() {
     }
   };
 
-  // Submit Solution
   const handleSubmit = async () => {
-    if (!user) { router.push("/login"); return; }
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     if (!problem) return;
-
     stopPolling();
     setSubmitting(true);
     setJudging(true);
@@ -264,10 +277,11 @@ export default function ProblemDetailPage() {
     setVerdict(null);
     setTestResults([]);
     setCompileOutput(null);
-
     try {
       const { data } = await api.post("/submissions/submit", {
-        problemId: problem.id, language, sourceCode: code,
+        problemId: problem.id,
+        language,
+        sourceCode: code,
       });
       setActiveSubmissionId(data.submissionId);
       activeSubIdRef.current = data.submissionId;
@@ -279,7 +293,6 @@ export default function ProblemDetailPage() {
     }
   };
 
-  // Toggle Bookmark
   const handleToggleBookmark = async () => {
     if (!user || !problem) return;
     try {
@@ -292,101 +305,137 @@ export default function ProblemDetailPage() {
     }
   };
 
-  // Reveal Hint
   const handleRevealHint = (index: number) => {
     setRevealedHints((prev) => new Set(prev).add(index));
   };
 
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-57px)]">
-        <p className="text-zinc-500">Loading problem...</p>
+      <div className="flex h-[calc(100vh-57px)] items-center justify-center bg-[#0e0e0e]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-700 border-t-zinc-300" />
       </div>
     );
   }
 
   if (!problem) return null;
 
+  /* ── Tab button helper ── */
+  const Tab = ({
+    id,
+    label,
+    active,
+    accent = "zinc",
+    dot,
+  }: {
+    id: string;
+    label: string;
+    active: boolean;
+    accent?: "zinc" | "violet";
+    dot?: boolean;
+  }) => (
+    <button
+      onClick={() => setActiveTab(id as any)}
+      className={`relative pb-3 text-xs font-medium transition-colors ${
+        active ? "text-zinc-100" : "text-zinc-600 hover:text-zinc-400"
+      }`}
+    >
+      <span className="flex items-center gap-1.5">
+        {label}
+        {dot && (
+          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+        )}
+      </span>
+      {active && (
+        <span
+          className={`absolute bottom-0 left-0 right-0 h-px ${accent === "violet" ? "bg-violet-500" : "bg-zinc-400"}`}
+        />
+      )}
+    </button>
+  );
+
   return (
-    <div className="flex h-[calc(100vh-57px)]">
-      {/* Left Panel — Problem Description */}
-      <div className="w-[45%] border-r border-zinc-800 overflow-y-auto">
-        <div className="px-6 py-4">
-          {/* Tabs */}
-          <div className="flex gap-4 border-b border-zinc-800 mb-4">
-            <button
-              onClick={() => setActiveTab("description")}
-              className={`pb-2 text-sm font-medium transition-colors ${activeTab === "description"
-                ? "text-white border-b-2 border-blue-500"
-                : "text-zinc-400 hover:text-white"
-                }`}
-            >
-              Description
-            </button>
-            <button
-              onClick={() => setActiveTab("submissions")}
-              className={`pb-2 text-sm font-medium transition-colors ${activeTab === "submissions"
-                ? "text-white border-b-2 border-blue-500"
-                : "text-zinc-400 hover:text-white"
-                }`}
-            >
-              Submissions
-            </button>
+    <div className="flex h-[calc(100vh-57px)] bg-[#0e0e0e]">
+      {/* ════════════════════════════════════════
+          LEFT PANEL — Description / Submissions / Review
+      ════════════════════════════════════════ */}
+      <div className="w-[45%] overflow-y-auto border-r border-white/[0.06]">
+        <div className="px-6 py-5">
+          {/* Tab bar */}
+          <div className="mb-5 flex items-center gap-5 border-b border-white/[0.05]">
+            <Tab
+              id="description"
+              label="Description"
+              active={activeTab === "description"}
+            />
+            <Tab
+              id="submissions"
+              label="Submissions"
+              active={activeTab === "submissions"}
+            />
             {(aiReview || aiReviewLoading) && (
-              <button
-                onClick={() => setActiveTab("review")}
-                className={`pb-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${activeTab === "review"
-                  ? "text-white border-b-2 border-purple-500"
-                  : "text-zinc-400 hover:text-white"
-                  }`}
-              >
-                🤖 AI Review
-                {aiReviewLoading && (
-                  <span className="inline-block w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
-                )}
-              </button>
+              <Tab
+                id="review"
+                label="AI Review"
+                active={activeTab === "review"}
+                accent="violet"
+                dot={aiReviewLoading}
+              />
             )}
           </div>
 
-          {activeTab === "review" ? (
+          {/* ── AI REVIEW TAB ── */}
+          {activeTab === "review" && (
             <div>
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                🤖 AI Code Review
-              </h2>
+              <div className="mb-4 flex items-center gap-2">
+                <span className="h-px w-4 bg-zinc-800" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                  AI Code Review
+                </span>
+              </div>
               {aiReviewLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <div className="flex gap-1.5 text-purple-400">
-                    <span className="animate-bounce text-lg" style={{ animationDelay: "0ms" }}>●</span>
-                    <span className="animate-bounce text-lg" style={{ animationDelay: "150ms" }}>●</span>
-                    <span className="animate-bounce text-lg" style={{ animationDelay: "300ms" }}>●</span>
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <div className="flex gap-1 text-violet-500">
+                    {[0, 150, 300].map((d) => (
+                      <span
+                        key={d}
+                        className="h-2 w-2 animate-bounce rounded-full bg-current"
+                        style={{ animationDelay: `${d}ms` }}
+                      />
+                    ))}
                   </div>
-                  <p className="text-sm text-zinc-500">Analyzing your code...</p>
+                  <p className="font-mono text-xs text-zinc-700">
+                    Analyzing your code…
+                  </p>
                 </div>
               ) : aiReview ? (
-                <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
+                <pre className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 font-sans text-sm leading-relaxed text-zinc-400 whitespace-pre-wrap">
                   {aiReview}
                 </pre>
               ) : (
-                <p className="text-sm text-zinc-500">No review available yet. Submit your code to get an AI review.</p>
+                <p className="font-mono text-xs text-zinc-700">
+                  No review yet. Submit your code to get an AI review.
+                </p>
               )}
             </div>
-          ) : activeTab === "description" ? (
+          )}
+
+          {/* ── DESCRIPTION TAB ── */}
+          {activeTab === "description" && (
             <>
-              <div className="flex items-center justify-between mb-2">
-                <h1 className="text-xl font-bold text-white">
+              {/* Title + bookmark */}
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <h1 className="text-lg font-light tracking-tight text-zinc-100 leading-snug">
                   {problem.title}
                 </h1>
                 {user && (
                   <button
                     onClick={handleToggleBookmark}
-                    className="p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
                     title={bookmarked ? "Remove bookmark" : "Bookmark problem"}
+                    className="mt-0.5 shrink-0 p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
                   >
                     <svg
-                      className={`h-5 w-5 ${bookmarked
-                        ? "text-yellow-400"
-                        : "text-zinc-500 hover:text-zinc-300"
-                        }`}
+                      className={`h-4 w-4 transition-colors ${bookmarked ? "text-amber-400" : "text-zinc-700 hover:text-zinc-400"}`}
                       fill={bookmarked ? "currentColor" : "none"}
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -401,112 +450,113 @@ export default function ProblemDetailPage() {
                   </button>
                 )}
               </div>
-              <div className="flex gap-3 mb-4">
-                <span
-                  className={`text-sm font-medium ${DIFFICULTY_COLORS[problem.difficulty]
-                    }`}
-                >
-                  {problem.difficulty}
+
+              {/* Meta pills */}
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <DifficultyBadge difficulty={problem.difficulty} />
+                <span className="inline-flex items-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 py-0.5 font-mono text-[11px] text-zinc-500">
+                  {problem.timeLimit} ms
                 </span>
-                <span className="text-sm text-zinc-500">
-                  Time: {problem.timeLimit}ms
-                </span>
-                <span className="text-sm text-zinc-500">
-                  Memory: {(problem.memoryLimit / 1024).toFixed(0)}MB
+                <span className="inline-flex items-center rounded-md border border-white/[0.07] bg-white/[0.03] px-2 py-0.5 font-mono text-[11px] text-zinc-500">
+                  {(problem.memoryLimit / 1024).toFixed(0)} MB
                 </span>
               </div>
 
-              <div className="prose prose-invert prose-sm max-w-none mb-6">
-                <pre className="whitespace-pre-wrap text-sm text-zinc-300 font-sans leading-relaxed">
-                  {problem.description}
-                </pre>
-              </div>
+              {/* Description */}
+              <pre className="mb-6 whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-400">
+                {problem.description}
+              </pre>
 
+              {/* Constraints */}
               {problem.constraints && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-zinc-300 mb-2">
-                    Constraints
-                  </h3>
-                  <pre className="text-sm text-zinc-400 bg-zinc-900 p-3 rounded whitespace-pre-wrap">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="h-px w-4 bg-zinc-800" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                      Constraints
+                    </span>
+                  </div>
+                  <pre className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 font-mono text-xs text-zinc-500 whitespace-pre-wrap">
                     {problem.constraints}
                   </pre>
                 </div>
               )}
 
-              {/* Sample Test Cases */}
+              {/* Examples */}
               {problem.testCases.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-zinc-300 mb-3">
-                    Examples
-                  </h3>
-                  {problem.testCases.map((tc, i) => (
-                    <div
-                      key={tc.id}
-                      className="mb-4 rounded border border-zinc-800 overflow-hidden"
-                    >
-                      <div className="bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 font-medium">
-                        Example {i + 1}
-                      </div>
-                      <div className="grid grid-cols-2 divide-x divide-zinc-800">
-                        <div className="p-3">
-                          <p className="text-xs text-zinc-500 mb-1">Input</p>
-                          <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
-                            {tc.input}
-                          </pre>
+                <div className="mb-6">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="h-px w-4 bg-zinc-800" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                      Examples
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {problem.testCases.map((tc, i) => (
+                      <div
+                        key={tc.id}
+                        className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
+                      >
+                        <div className="border-b border-white/[0.05] px-4 py-2">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                            Example {i + 1}
+                          </span>
                         </div>
-                        <div className="p-3">
-                          <p className="text-xs text-zinc-500 mb-1">Output</p>
-                          <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
-                            {tc.output}
-                          </pre>
+                        <div className="grid grid-cols-2 divide-x divide-white/[0.05]">
+                          <div className="px-4 py-3">
+                            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-700">
+                              Input
+                            </p>
+                            <pre className="font-mono text-xs text-zinc-300 whitespace-pre-wrap">
+                              {tc.input}
+                            </pre>
+                          </div>
+                          <div className="px-4 py-3">
+                            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-700">
+                              Output
+                            </p>
+                            <pre className="font-mono text-xs text-zinc-300 whitespace-pre-wrap">
+                              {tc.output}
+                            </pre>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Hints Section */}
+              {/* Hints */}
               {problem.hints && problem.hints.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
-                    <svg
-                      className="h-4 w-4 text-yellow-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                      />
-                    </svg>
-                    Hints ({problem.hints.length})
-                  </h3>
+                <div className="mt-2">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="h-px w-4 bg-zinc-800" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                      Hints ({problem.hints.length})
+                    </span>
+                  </div>
                   <div className="space-y-2">
                     {problem.hints.map((hint, i) => (
                       <div
                         key={hint.id}
-                        className="rounded border border-zinc-800 overflow-hidden"
+                        className="overflow-hidden rounded-xl border border-white/[0.06]"
                       >
                         {revealedHints.has(i) ? (
-                          <div className="px-4 py-3 bg-zinc-900/50">
-                            <p className="text-xs text-yellow-500 mb-1 font-medium">
+                          <div className="px-4 py-3 bg-amber-950/20">
+                            <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-amber-600">
                               Hint {i + 1}
                             </p>
-                            <p className="text-sm text-zinc-300">
+                            <p className="text-sm text-zinc-400">
                               {hint.content}
                             </p>
                           </div>
                         ) : (
                           <button
                             onClick={() => handleRevealHint(i)}
-                            className="w-full px-4 py-3 text-left text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30 transition-colors flex items-center gap-2"
+                            className="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-white/[0.03]"
                           >
                             <svg
-                              className="h-4 w-4"
+                              className="h-3.5 w-3.5 shrink-0 text-zinc-700"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -524,7 +574,9 @@ export default function ProblemDetailPage() {
                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                               />
                             </svg>
-                            Click to reveal Hint {i + 1}
+                            <span className="font-mono text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+                              Reveal hint {i + 1}
+                            </span>
                           </button>
                         )}
                       </div>
@@ -533,28 +585,34 @@ export default function ProblemDetailPage() {
                 </div>
               )}
             </>
-          ) : (
+          )}
+
+          {/* ── SUBMISSIONS TAB ── */}
+          {activeTab === "submissions" && (
             <div className="space-y-2">
               {userSubmissions.length === 0 ? (
-                <p className="text-zinc-500 text-sm">No submissions yet.</p>
+                <div className="flex items-center justify-center py-14">
+                  <p className="font-mono text-xs text-zinc-700">
+                    No submissions yet.
+                  </p>
+                </div>
               ) : (
                 userSubmissions.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between rounded border border-zinc-800 px-4 py-2.5"
+                    className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 hover:bg-white/[0.04] transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-sm font-medium ${VERDICT_COLORS[s.verdict]
-                          }`}
+                        className={`text-xs font-semibold ${VERDICT_COLORS[s.verdict]}`}
                       >
                         {VERDICT_LABELS[s.verdict]}
                       </span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="font-mono text-[11px] text-zinc-600">
                         {s.language}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
+                    <div className="flex items-center gap-3 font-mono text-[10px] text-zinc-700">
                       <span>
                         {s.testsPassed}/{s.testsTotal}
                       </span>
@@ -569,9 +627,11 @@ export default function ProblemDetailPage() {
         </div>
       </div>
 
-      {/* Right Panel — Editor + Results */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 min-h-0">
+      {/* ════════════════════════════════════════
+          RIGHT PANEL — Editor + Results
+      ════════════════════════════════════════ */}
+      <div className="flex flex-1 flex-col">
+        <div className="min-h-0 flex-1">
           <CodeEditor
             language={language}
             onLanguageChange={setLanguage}
@@ -583,9 +643,7 @@ export default function ProblemDetailPage() {
             submitting={submitting}
           />
         </div>
-
-        {/* Results Panel */}
-        <div className="h-[35%] overflow-y-auto border-t border-zinc-800">
+        <div className="h-[35%] overflow-y-auto border-t border-white/[0.06]">
           <ResultsPanel
             verdict={verdict}
             testResults={testResults}
@@ -596,8 +654,6 @@ export default function ProblemDetailPage() {
             testsTotal={testsTotal}
             loading={judging}
           />
-
-
         </div>
       </div>
 

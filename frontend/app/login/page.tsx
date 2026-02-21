@@ -28,53 +28,137 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-57px)] items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-white mb-6 text-center">
-          Sign In
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <p className="text-sm text-red-400 bg-red-950 border border-red-900 rounded p-2">
-              {error}
-            </p>
-          )}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">
-              Username or Email
-            </label>
-            <input
-              type="text"
-              value={usernameOrEmail}
-              onChange={(e) => setUsernameOrEmail(e.target.value)}
-              required
-              className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-            />
+    <div className="min-h-screen bg-[#0e0e0e] text-zinc-100 font-sans antialiased">
+      {/* Grain overlay */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.025]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: "128px",
+        }}
+      />
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          {/* Logo / wordmark */}
+          <div className="mb-10 text-center">
+            <Link href="/" className="inline-block">
+              <span className="font-mono text-lg font-bold tracking-tight">
+                CODE<span className="text-zinc-500">ARENA</span>
+              </span>
+            </Link>
           </div>
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-            />
+
+          {/* Card */}
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/60 backdrop-blur-sm px-8 py-9">
+            {/* Heading */}
+            <div className="mb-7">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="h-px w-5 bg-zinc-700" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+                  Welcome back
+                </span>
+              </div>
+              <h1 className="text-2xl font-light tracking-tight text-zinc-100">
+                Sign into your{" "}
+                <em
+                  className="not-italic text-zinc-400"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                >
+                  account
+                </em>
+                .
+              </h1>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Error banner */}
+              {error && (
+                <p className="rounded-lg border border-red-900/60 bg-red-950/50 px-4 py-2.5 text-xs text-red-400">
+                  {error}
+                </p>
+              )}
+
+              {/* Username or Email */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-zinc-600">
+                  Username or Email
+                </label>
+                <input
+                  type="text"
+                  value={usernameOrEmail}
+                  onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  required
+                  placeholder="username or you@example.com"
+                  className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-700 transition-colors focus:border-white/[0.18] focus:bg-white/[0.05] focus:outline-none"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium uppercase tracking-widest text-zinc-600">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-700 transition-colors focus:border-white/[0.18] focus:bg-white/[0.05] focus:outline-none"
+                />
+              </div>
+
+              {/* Submit */}
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl border border-zinc-100 bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-900 transition-all hover:bg-white hover:shadow-lg hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {loading ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <svg
+                        className="h-3.5 w-3.5 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"
+                        />
+                      </svg>
+                      Signing in…
+                    </span>
+                  ) : (
+                    "Sign In →"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-zinc-500">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-blue-400 hover:underline">
-            Register
-          </Link>
-        </p>
+
+          {/* Register link */}
+          <p className="mt-5 text-center text-xs text-zinc-600">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/register"
+              className="text-zinc-400 underline underline-offset-2 hover:text-zinc-200 transition-colors"
+            >
+              Register
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
