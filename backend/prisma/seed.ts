@@ -419,6 +419,7 @@ Only consider alphanumeric characters, ignoring case.
     update: {},
     create: { contestId: contest.id, userId: user2.id },
   });
+
   const anagram = await prisma.problem.upsert({
   where: { slug: "valid-anagram" },
   update: {},
@@ -668,9 +669,90 @@ const wordLadder = await prisma.problem.upsert({
     constraints: "1 ≤ n ≤ 5000",
   },
 });
+  // ─── Create Live Contest ─────────────────────────────────────────
 
+  const liveContestStart = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
+  const liveContestEnd = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+
+  const liveContest = await prisma.contest.upsert({
+    where: { slug: "live-contest-1" },
+    update: {
+      startTime: liveContestStart,
+      endTime: liveContestEnd,
+      status: "ACTIVE",
+    },
+    create: {
+      title: "Live Contest #1",
+      slug: "live-contest-1",
+      description: "Active contest happening right now. Solve 3 problems!",
+      startTime: liveContestStart,
+      endTime: liveContestEnd,
+      status: "ACTIVE",
+    },
+  });
+
+  // Link problems to live contest
+  await prisma.contestProblem.upsert({
+    where: {
+      contestId_problemId: { contestId: liveContest.id, problemId: maxElement.id },
+    },
+    update: {},
+    create: {
+      contestId: liveContest.id,
+      problemId: maxElement.id,
+      label: "A",
+      points: 100,
+      orderIdx: 0,
+    },
+  });
+
+  await prisma.contestProblem.upsert({
+    where: {
+      contestId_problemId: { contestId: liveContest.id, problemId: binarySearch.id },
+    },
+    update: {},
+    create: {
+      contestId: liveContest.id,
+      problemId: binarySearch.id,
+      label: "B",
+      points: 150,
+      orderIdx: 1,
+    },
+  });
+
+  await prisma.contestProblem.upsert({
+    where: {
+      contestId_problemId: { contestId: liveContest.id, problemId: islands.id },
+    },
+    update: {},
+    create: {
+      contestId: liveContest.id,
+      problemId: islands.id,
+      label: "C",
+      points: 250,
+      orderIdx: 2,
+    },
+  });
+
+  // Register both users to live contest
+  await prisma.contestParticipant.upsert({
+    where: {
+      contestId_userId: { contestId: liveContest.id, userId: user1.id },
+    },
+    update: {},
+    create: { contestId: liveContest.id, userId: user1.id },
+  });
+
+  await prisma.contestParticipant.upsert({
+    where: {
+      contestId_userId: { contestId: liveContest.id, userId: user2.id },
+    },
+    update: {},
+    create: { contestId: liveContest.id, userId: user2.id },
+  });
   console.log("✅ Contest created & users registered");
-  console.log(`📅 Contest starts at: ${contestStart.toISOString()}`);
+  console.log(`📅 Upcoming contest starts at: ${contestStart.toISOString()}`);
+  console.log(`🔴 Live contest active until: ${liveContestEnd.toISOString()}`);
   console.log("🌱 Seed complete!");
 }
 

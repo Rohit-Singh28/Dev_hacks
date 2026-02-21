@@ -54,7 +54,6 @@ model Problem {
     createdAt    DateTime   @default(now()) @map("created_at")
     updatedAt    DateTime   @updatedAt @map("updated_at")
 
-<<<<<<< HEAD
     testCases                   TestCase[]
     submissions                 Submission[]
     contestProblems             ContestProblem[]
@@ -63,7 +62,6 @@ model Problem {
     roomProblems    RoomProblem[]
     bookmarks       Bookmark[]
     hints           Hint[]
->>>>>>> 896c2661c07a8f854460c794f29b35905ae4dcda
 
     @@index([slug])
     @@index([difficulty])
@@ -417,5 +415,4 @@ model RoomParticipant {
     @@unique([roomId, userId])
     @@index([roomId, score, penalty])
     @@map("room_participants")
->>>>>>> 896c2661c07a8f854460c794f29b35905ae4dcda
 }
