@@ -22,6 +22,12 @@ function ContestEndedContent() {
       "You exceeded the maximum number of allowed tab/window switches during the contest. This is treated as a potential integrity violation.",
     clipboard_abuse:
       "Repeated clipboard actions (copy/paste/cut) were detected during the contest. This is treated as a potential integrity violation.",
+    screen_away:
+      "You were not detected in front of the screen too many times during the contest. This is treated as a potential integrity violation.",
+    fullscreen_exit:
+      "You exited fullscreen mode too many times during the contest. Participants must remain in fullscreen throughout the contest. This is treated as a potential integrity violation.",
+    screen_capture:
+      "Screen recording or screen sharing was detected during the contest. This is strictly prohibited and treated as a serious integrity violation.",
   };
 
   return (

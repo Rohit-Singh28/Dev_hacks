@@ -14,6 +14,14 @@ export type { ClipboardMonitorConfig } from "./clipboardMonitor";
 export { ScreenMonitor } from "./screenMonitor";
 export type { ScreenMonitorConfig } from "./screenMonitor";
 
+export { FullscreenMonitor } from "./fullscreenMonitor";
+export type { FullscreenMonitorConfig } from "./fullscreenMonitor";
+
+export { ScreenCaptureMonitor } from "./screenCaptureMonitor";
+export type { ScreenCaptureMonitorConfig } from "./screenCaptureMonitor";
+
+export { ContentProtection } from "./contentProtection";
+
 export {
   terminateContest,
   isContestTerminated,

@@ -28,7 +28,9 @@ function terminationReasonKey(contestId: string): string {
 export type TerminationReason =
   | "tab_switch"
   | "clipboard_abuse"
-  | "screen_away";
+  | "screen_away"
+  | "fullscreen_exit"
+  | "screen_capture";
 
 /**
  * Check whether this contest has already been terminated for the user.
@@ -97,6 +99,8 @@ export function clearMonitoringData(contestId: string): void {
     `cm_tab_switches_${contestId}`,
     `cm_clipboard_count_${contestId}`,
     `cm_screen_violations_${contestId}`,
+    `cm_fullscreen_violations_${contestId}`,
+    `cm_screencapture_violations_${contestId}`,
     terminatedKey(contestId),
     terminationReasonKey(contestId),
   ];
