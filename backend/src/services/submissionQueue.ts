@@ -62,7 +62,7 @@ interface TestCaseResult {
 // ─── Enqueue ─────────────────────────────────────────────────────────
 
 export async function enqueueSubmission(
-  data: SubmissionJobData
+  data: SubmissionJobData,
 ): Promise<string> {
   const job = await submissionQueue.add("judge", data, {
     // Priority: contest submissions get higher priority
@@ -78,8 +78,7 @@ function mapVerdict(statusId: number): Verdict {
   if (statusId === JUDGE0_STATUS.WRONG_ANSWER) return "WRONG_ANSWER";
   if (statusId === JUDGE0_STATUS.TIME_LIMIT_EXCEEDED)
     return "TIME_LIMIT_EXCEEDED";
-  if (statusId === JUDGE0_STATUS.COMPILATION_ERROR)
-    return "COMPILATION_ERROR";
+  if (statusId === JUDGE0_STATUS.COMPILATION_ERROR) return "COMPILATION_ERROR";
   if (isRuntimeError(statusId)) return "RUNTIME_ERROR";
   // Treat memory-related errors
   if (statusId === JUDGE0_STATUS.RUNTIME_ERROR_SIGXFSZ)
@@ -135,12 +134,12 @@ async function processSubmission(job: Job<SubmissionJobData>): Promise<void> {
 
   const languageId = config.languageMap[language];
 
-  // Build Judge0 submissions — one per test case
+  // Build Judge0 submissions — one per test case (plain text, not base64)
   const judge0Submissions: Judge0Submission[] = testCases.map((tc) => ({
-    source_code: Buffer.from(sourceCode).toString("base64"),
+    source_code: sourceCode,
     language_id: languageId,
-    stdin: Buffer.from(tc.input).toString("base64"),
-    expected_output: Buffer.from(tc.output).toString("base64"),
+    stdin: tc.input,
+    expected_output: tc.output,
     cpu_time_limit: problem.timeLimit / 1000, // ms → seconds
     memory_limit: problem.memoryLimit,
   }));
@@ -243,7 +242,7 @@ async function processSubmission(job: Job<SubmissionJobData>): Promise<void> {
 async function updateContestScore(
   contestId: string,
   userId: string,
-  problemId: string
+  problemId: string,
 ): Promise<void> {
   // Check if user already solved this problem in this contest
   const existingAC = await prisma.submission.findFirst({
@@ -286,7 +285,7 @@ async function updateContestScore(
   });
 
   const solveTimeSeconds = Math.floor(
-    (existingAC.createdAt.getTime() - contest.startTime.getTime()) / 1000
+    (existingAC.createdAt.getTime() - contest.startTime.getTime()) / 1000,
   );
   const penalty = solveTimeSeconds + wrongSubmissions * 20 * 60; // 20 min per wrong attempt
 
@@ -346,7 +345,7 @@ export function startSubmissionWorker(): void {
         max: 10,
         duration: 1000, // Max 10 jobs per second to not overwhelm Judge0
       },
-    }
+    },
   );
 
   worker.on("completed", (job) => {

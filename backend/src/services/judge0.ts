@@ -99,10 +99,10 @@ class Judge0Service {
   ): Promise<Judge0Result[]> {
     const start = Date.now();
 
-    // ✅ CRITICAL: Allow Judge0 queue to process
-    await this.sleep(1800);
+    // Brief initial wait for Judge0 to start processing
+    await this.sleep(500);
 
-    let delay = 1500;
+    let delay = 500;
 
     while (Date.now() - start < maxWaitMs) {
       const { data } = await this.client.get("/submissions/batch", {
@@ -128,8 +128,8 @@ class Judge0Service {
 
       await this.sleep(delay);
 
-      // ✅ Smarter exponential backoff (RapidAPI friendly)
-      delay = Math.min(delay * 2, 6000);
+      // Exponential backoff capped at 2s
+      delay = Math.min(delay * 1.5, 2000);
     }
 
     throw new Error("Judge0 polling timed out");
