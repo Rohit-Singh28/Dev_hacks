@@ -16,10 +16,14 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
     ? String(req.query.difficulty)
     : undefined;
   const search = req.query.search ? String(req.query.search) : undefined;
+  const topicSlug = req.query.topic ? String(req.query.topic) : undefined;
 
   const where: any = {};
   if (difficulty && ["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
     where.difficulty = difficulty;
+  }
+  if (topicSlug) {
+    where.topic = { slug: topicSlug };
   }
   if (search) {
     where.OR = [
@@ -38,6 +42,15 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         difficulty: true,
         timeLimit: true,
         memoryLimit: true,
+        topic: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            color: true,
+            icon: true,
+          },
+        },
         _count: { select: { submissions: true } },
       },
       orderBy: { createdAt: "asc" },
@@ -53,6 +66,25 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
   });
 });
 
+// ─── Get All Topics ─────────────────────────────────────────────────
+
+router.get("/topics/all", async (req: Request, res: Response): Promise<void> => {
+  const topics = await prisma.topic.findMany({
+    orderBy: { orderIndex: "asc" },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      icon: true,
+      color: true,
+      _count: { select: { problems: true } },
+    },
+  });
+
+  res.json({ topics });
+});
+
 // ─── Get Problem by Slug ─────────────────────────────────────────────
 
 router.get(
@@ -62,6 +94,15 @@ router.get(
     const problem = await prisma.problem.findUnique({
       where: { slug: String(req.params.slug) },
       include: {
+        topic: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            color: true,
+            icon: true,
+          },
+        },
         // Only fetch visible test cases — NEVER expose hidden ones via API
         testCases: {
           where: { isHidden: false },

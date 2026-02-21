@@ -7,6 +7,16 @@ export interface User {
   rating: number;
 }
 
+export interface Topic {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  _count?: { problems: number };
+}
+
 export interface Problem {
   id: string;
   title: string;
@@ -18,6 +28,7 @@ export interface Problem {
   sampleInput?: string;
   sampleOutput?: string;
   constraints?: string;
+  topic?: Topic;
   testCases: VisibleTestCase[];
   hints?: Hint[];
   _count?: { submissions: number };
@@ -51,6 +62,7 @@ export interface ProblemListItem {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
   memoryLimit: number;
+  topic?: Topic;
   _count: { submissions: number };
 }
 
@@ -210,3 +222,58 @@ export interface RoomParticipantInfo {
   joinedAt: string;
   user: { id: string; username: string; rating: number };
 }
+
+// ─── Roadmap / Gamification Types ────────────────────────────────────
+
+export interface RoadmapBadge {
+  name: string;
+  icon: string;
+  color: string;
+}
+
+export interface RoadmapProblem {
+  id: string;
+  title: string;
+  slug: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  solved: boolean;
+  points: number;
+  _count?: { submissions: number };
+}
+
+export interface RoadmapLevel {
+  id: number;
+  name: string;
+  description: string;
+  requiredPoints: number;
+  badge: RoadmapBadge;
+  problemDifficulty: "EASY" | "MEDIUM" | "HARD";
+  problem: RoadmapProblem | null;
+  isUnlocked: boolean;
+  isCompleted: boolean;
+}
+
+export interface RoadmapUserProgress {
+  totalPoints: number;
+  earnedBadges: string[];
+  currentLevel: number;
+  totalSolved: number;
+  nextMilestone: number | null;
+}
+
+export interface RoadmapData {
+  levels: RoadmapLevel[];
+  userProgress: RoadmapUserProgress;
+}
+
+export interface RoadmapLeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  rating: number;
+  points: number;
+  solvedCount: number;
+  currentLevel: number;
+  badge: RoadmapBadge;
+}
+

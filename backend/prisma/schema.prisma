@@ -32,6 +32,26 @@ model User {
     @@map("users")
 }
 
+// ─── Topics ──────────────────────────────────────────────────────────
+
+model Topic {
+    id          String   @id @default(uuid())
+    name        String   @unique
+    slug        String   @unique
+    description String?  @db.Text
+    icon        String?  // SVG icon name or emoji
+    color       String?  // Hex color for UI
+    orderIndex  Int      @default(0) @map("order_index")
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    problems Problem[]
+
+    @@index([slug])
+    @@index([orderIndex])
+    @@map("topics")
+}
+
 // ─── Problems ────────────────────────────────────────────────────────
 
 enum Difficulty {
@@ -46,6 +66,7 @@ model Problem {
     slug         String     @unique
     description  String     @db.Text
     difficulty   Difficulty @default(MEDIUM)
+    topicId      String?    @map("topic_id")
     timeLimit    Int        @default(2000) @map("time_limit") // ms
     memoryLimit  Int        @default(262144) @map("memory_limit") // KB (256MB)
     sampleInput  String?    @map("sample_input") @db.Text
@@ -54,6 +75,7 @@ model Problem {
     createdAt    DateTime   @default(now()) @map("created_at")
     updatedAt    DateTime   @updatedAt @map("updated_at")
 
+    topic                       Topic?     @relation(fields: [topicId], references: [id], onDelete: SetNull)
     testCases                   TestCase[]
     submissions                 Submission[]
     contestProblems             ContestProblem[]
@@ -65,6 +87,7 @@ model Problem {
 
     @@index([slug])
     @@index([difficulty])
+    @@index([topicId])
     @@map("problems")
 }
 

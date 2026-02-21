@@ -33,14 +33,201 @@ async function main() {
 
   console.log("✅ Users created");
 
+  // ─── Create Topics ───────────────────────────────────────────────
+
+  const topicArrays = await prisma.topic.upsert({
+    where: { slug: "arrays" },
+    update: {},
+    create: {
+      name: "Arrays",
+      slug: "arrays",
+      description: "Problems involving array manipulation, traversal, and operations",
+      icon: "grid",
+      color: "#3B82F6",
+      orderIndex: 1,
+    },
+  });
+
+  const topicStrings = await prisma.topic.upsert({
+    where: { slug: "strings" },
+    update: {},
+    create: {
+      name: "Strings",
+      slug: "strings",
+      description: "String manipulation, pattern matching, and text processing",
+      icon: "text",
+      color: "#10B981",
+      orderIndex: 2,
+    },
+  });
+
+  const topicHashTable = await prisma.topic.upsert({
+    where: { slug: "hash-table" },
+    update: {},
+    create: {
+      name: "Hash Table",
+      slug: "hash-table",
+      description: "Problems using hash maps, sets, and frequency counting",
+      icon: "hash",
+      color: "#8B5CF6",
+      orderIndex: 3,
+    },
+  });
+
+  const topicTwoPointers = await prisma.topic.upsert({
+    where: { slug: "two-pointers" },
+    update: {},
+    create: {
+      name: "Two Pointers",
+      slug: "two-pointers",
+      description: "Two pointer technique for array and string problems",
+      icon: "arrows",
+      color: "#F59E0B",
+      orderIndex: 4,
+    },
+  });
+
+  const topicSlidingWindow = await prisma.topic.upsert({
+    where: { slug: "sliding-window" },
+    update: {},
+    create: {
+      name: "Sliding Window",
+      slug: "sliding-window",
+      description: "Sliding window technique for subarray and substring problems",
+      icon: "window",
+      color: "#EC4899",
+      orderIndex: 5,
+    },
+  });
+
+  const topicSearching = await prisma.topic.upsert({
+    where: { slug: "searching" },
+    update: {},
+    create: {
+      name: "Binary Search",
+      slug: "searching",
+      description: "Binary search and other searching algorithms",
+      icon: "search",
+      color: "#06B6D4",
+      orderIndex: 6,
+    },
+  });
+
+  const topicSorting = await prisma.topic.upsert({
+    where: { slug: "sorting" },
+    update: {},
+    create: {
+      name: "Sorting",
+      slug: "sorting",
+      description: "Sorting algorithms and problems requiring sorted data",
+      icon: "sort",
+      color: "#84CC16",
+      orderIndex: 7,
+    },
+  });
+
+  const topicRecursion = await prisma.topic.upsert({
+    where: { slug: "recursion" },
+    update: {},
+    create: {
+      name: "Recursion",
+      slug: "recursion",
+      description: "Recursive problem solving and divide & conquer",
+      icon: "refresh",
+      color: "#F97316",
+      orderIndex: 8,
+    },
+  });
+
+  const topicDP = await prisma.topic.upsert({
+    where: { slug: "dynamic-programming" },
+    update: {},
+    create: {
+      name: "Dynamic Programming",
+      slug: "dynamic-programming",
+      description: "Memoization, tabulation, and optimal substructure problems",
+      icon: "table",
+      color: "#EF4444",
+      orderIndex: 9,
+    },
+  });
+
+  const topicGraphs = await prisma.topic.upsert({
+    where: { slug: "graphs" },
+    update: {},
+    create: {
+      name: "Graphs",
+      slug: "graphs",
+      description: "Graph traversal, shortest path, and graph algorithms",
+      icon: "share",
+      color: "#14B8A6",
+      orderIndex: 10,
+    },
+  });
+
+  const topicTrees = await prisma.topic.upsert({
+    where: { slug: "trees" },
+    update: {},
+    create: {
+      name: "Trees",
+      slug: "trees",
+      description: "Binary trees, BST, and tree traversal problems",
+      icon: "tree",
+      color: "#22C55E",
+      orderIndex: 11,
+    },
+  });
+
+  const topicDataStructures = await prisma.topic.upsert({
+    where: { slug: "data-structures" },
+    update: {},
+    create: {
+      name: "Data Structures",
+      slug: "data-structures",
+      description: "Stacks, queues, heaps, and advanced data structures",
+      icon: "database",
+      color: "#6366F1",
+      orderIndex: 12,
+    },
+  });
+
+  const topicBacktracking = await prisma.topic.upsert({
+    where: { slug: "backtracking" },
+    update: {},
+    create: {
+      name: "Backtracking",
+      slug: "backtracking",
+      description: "Backtracking algorithms and constraint satisfaction",
+      icon: "undo",
+      color: "#A855F7",
+      orderIndex: 13,
+    },
+  });
+
+  const topicBasics = await prisma.topic.upsert({
+    where: { slug: "basics" },
+    update: {},
+    create: {
+      name: "Basics",
+      slug: "basics",
+      description: "Fundamental programming concepts and simple problems",
+      icon: "code",
+      color: "#64748B",
+      orderIndex: 0,
+    },
+  });
+
+  console.log("✅ Topics created");
+
   // ─── Create Problems ─────────────────────────────────────────────
 
   const twoSum = await prisma.problem.upsert({
     where: { slug: "two-sum" },
-    update: {},
+    update: { topicId: topicHashTable.id },
     create: {
       title: "Two Sum",
       slug: "two-sum",
+      topicId: topicHashTable.id,
       description: `Given an array of integers \`nums\` and an integer \`target\`, return indices of the two numbers such that they add up to \`target\`.
 
 You may assume that each input would have exactly one solution, and you may not use the same element twice.
@@ -119,10 +306,11 @@ You may assume that each input would have exactly one solution, and you may not 
 
   const palindrome = await prisma.problem.upsert({
     where: { slug: "palindrome-check" },
-    update: {},
+    update: { topicId: topicTwoPointers.id },
     create: {
       title: "Palindrome Check",
       slug: "palindrome-check",
+      topicId: topicTwoPointers.id,
       description: `Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherwise.
 
 Only consider alphanumeric characters, ignoring case.
@@ -184,10 +372,11 @@ Only consider alphanumeric characters, ignoring case.
 
   const fib = await prisma.problem.upsert({
     where: { slug: "fibonacci-number" },
-    update: {},
+    update: { topicId: topicDP.id },
     create: {
       title: "Fibonacci Number",
       slug: "fibonacci-number",
+      topicId: topicDP.id,
       description: `Given \`n\`, return the nth Fibonacci number. F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2).
 
 **Input Format:**
@@ -422,10 +611,11 @@ Only consider alphanumeric characters, ignoring case.
 
   const anagram = await prisma.problem.upsert({
   where: { slug: "valid-anagram" },
-  update: {},
+  update: { topicId: topicStrings.id },
   create: {
     title: "Valid Anagram",
     slug: "valid-anagram",
+    topicId: topicStrings.id,
     description: `Check if two strings are anagrams.`,
     difficulty: "EASY",
     timeLimit: 1000,
@@ -463,10 +653,11 @@ await prisma.testCase.upsert({
 });
 const maxElement = await prisma.problem.upsert({
   where: { slug: "max-element" },
-  update: {},
+  update: { topicId: topicArrays.id },
   create: {
     title: "Maximum Element",
     slug: "max-element",
+    topicId: topicArrays.id,
     description: `Find the maximum element in array.`,
     difficulty: "EASY",
     timeLimit: 1000,
@@ -491,10 +682,11 @@ await prisma.testCase.upsert({
 });
 const countEven = await prisma.problem.upsert({
   where: { slug: "count-even" },
-  update: {},
+  update: { topicId: topicBasics.id },
   create: {
     title: "Count Even Numbers",
     slug: "count-even",
+    topicId: topicBasics.id,
     description: `Count even integers in array.`,
     difficulty: "EASY",
     timeLimit: 1000,
@@ -519,10 +711,11 @@ await prisma.testCase.upsert({
 });
 const binarySearch = await prisma.problem.upsert({
   where: { slug: "binary-search" },
-  update: {},
+  update: { topicId: topicSearching.id },
   create: {
     title: "Binary Search",
     slug: "binary-search",
+    topicId: topicSearching.id,
     description: `Return index of target else -1.`,
     difficulty: "MEDIUM",
     timeLimit: 1000,
@@ -547,10 +740,11 @@ await prisma.testCase.upsert({
 });
 const substring = await prisma.problem.upsert({
   where: { slug: "longest-substring" },
-  update: {},
+  update: { topicId: topicSlidingWindow.id },
   create: {
     title: "Longest Substring",
     slug: "longest-substring",
+    topicId: topicSlidingWindow.id,
     description: `Longest substring without repeating characters.`,
     difficulty: "MEDIUM",
     timeLimit: 2000,
@@ -562,10 +756,11 @@ const substring = await prisma.problem.upsert({
 });
 const mergeIntervals = await prisma.problem.upsert({
   where: { slug: "merge-intervals" },
-  update: {},
+  update: { topicId: topicSorting.id },
   create: {
     title: "Merge Intervals",
     slug: "merge-intervals",
+    topicId: topicSorting.id,
     description: `Merge overlapping intervals.`,
     difficulty: "MEDIUM",
     timeLimit: 2000,
@@ -577,10 +772,11 @@ const mergeIntervals = await prisma.problem.upsert({
 });
 const islands = await prisma.problem.upsert({
   where: { slug: "number-of-islands" },
-  update: {},
+  update: { topicId: topicGraphs.id },
   create: {
     title: "Number of Islands",
     slug: "number-of-islands",
+    topicId: topicGraphs.id,
     description: `Count number of islands.`,
     difficulty: "MEDIUM",
     timeLimit: 2000,
@@ -592,10 +788,11 @@ const islands = await prisma.problem.upsert({
 });
 const dijkstra = await prisma.problem.upsert({
   where: { slug: "dijkstra" },
-  update: {},
+  update: { topicId: topicGraphs.id },
   create: {
     title: "Dijkstra Shortest Path",
     slug: "dijkstra",
+    topicId: topicGraphs.id,
     description: `Find shortest path.`,
     difficulty: "HARD",
     timeLimit: 2000,
@@ -608,10 +805,11 @@ const dijkstra = await prisma.problem.upsert({
 
 const segTree = await prisma.problem.upsert({
   where: { slug: "segment-tree" },
-  update: {},
+  update: { topicId: topicDataStructures.id },
   create: {
     title: "Segment Tree",
     slug: "segment-tree",
+    topicId: topicDataStructures.id,
     description: `Range Sum Query.`,
     difficulty: "HARD",
     timeLimit: 2000,
@@ -624,10 +822,11 @@ const segTree = await prisma.problem.upsert({
 
 const lru = await prisma.problem.upsert({
   where: { slug: "lru-cache" },
-  update: {},
+  update: { topicId: topicDataStructures.id },
   create: {
     title: "LRU Cache",
     slug: "lru-cache",
+    topicId: topicDataStructures.id,
     description: `Design LRU cache.`,
     difficulty: "HARD",
     timeLimit: 2000,
@@ -640,10 +839,11 @@ const lru = await prisma.problem.upsert({
 
 const nQueens = await prisma.problem.upsert({
   where: { slug: "n-queens" },
-  update: {},
+  update: { topicId: topicBacktracking.id },
   create: {
     title: "N Queens",
     slug: "n-queens",
+    topicId: topicBacktracking.id,
     description: `Return number of solutions.`,
     difficulty: "HARD",
     timeLimit: 2000,
@@ -656,10 +856,11 @@ const nQueens = await prisma.problem.upsert({
 
 const wordLadder = await prisma.problem.upsert({
   where: { slug: "word-ladder" },
-  update: {},
+  update: { topicId: topicGraphs.id },
   create: {
     title: "Word Ladder",
     slug: "word-ladder",
+    topicId: topicGraphs.id,
     description: `Shortest transformation sequence.`,
     difficulty: "HARD",
     timeLimit: 2000,

@@ -44,6 +44,12 @@ export default function Navbar() {
             Problems
           </Link>
           <Link
+            href="/problems/roadmap"
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
+          >
+            Roadmap
+          </Link>
+          <Link
             href="/contests"
             className="text-sm text-zinc-400 hover:text-white transition-colors"
           >

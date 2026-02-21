@@ -6,6 +6,15 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/authStore";
 import { DIFFICULTY_COLORS } from "@/lib/constants";
 
+interface Topic {
+  id: string;
+  name: string;
+  slug: string;
+  color?: string;
+  icon?: string;
+  _count?: { problems: number };
+}
+
 interface ProblemListItem {
   id: string;
   title: string;
@@ -13,18 +22,34 @@ interface ProblemListItem {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
   memoryLimit: number;
+  topic?: Topic;
   _count: { submissions: number };
 }
 
 export default function ProblemsPage() {
   const { user } = useAuthStore();
   const [problems, setProblems] = useState<ProblemListItem[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("ALL");
+  const [topicFilter, setTopicFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [showBookmarked, setShowBookmarked] = useState(false);
+
+  // Fetch topics
+  useEffect(() => {
+    async function fetchTopics() {
+      try {
+        const { data } = await api.get("/problems/topics/all");
+        setTopics(data.topics);
+      } catch (err) {
+        console.error("Failed to fetch topics:", err);
+      }
+    }
+    fetchTopics();
+  }, []);
 
   // Fetch problems
   useEffect(() => {
@@ -32,6 +57,7 @@ export default function ProblemsPage() {
       try {
         const params: any = {};
         if (filter !== "ALL") params.difficulty = filter;
+        if (topicFilter !== "ALL") params.topic = topicFilter;
         if (search.trim()) params.search = search.trim();
         const { data } = await api.get("/problems", { params });
         setProblems(data.problems);
@@ -42,7 +68,7 @@ export default function ProblemsPage() {
       }
     }
     fetchProblems();
-  }, [filter, search]);
+  }, [filter, topicFilter, search]);
 
   // Fetch solved & bookmarked IDs for logged-in user
   useEffect(() => {
@@ -96,7 +122,24 @@ export default function ProblemsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Problems</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {/* Roadmap Button */}
+          <Link
+            href="/problems/roadmap"
+            className="flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-500 transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="hidden sm:inline">Roadmap</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        {/* Difficulty Filter */}
+        <div className="flex gap-1 bg-zinc-900 rounded-lg p-1">
           {["ALL", "EASY", "MEDIUM", "HARD"].map((d) => (
             <button
               key={d}
@@ -111,6 +154,32 @@ export default function ProblemsPage() {
             </button>
           ))}
         </div>
+
+        {/* Topic Filter */}
+        <select
+          value={topicFilter}
+          onChange={(e) => setTopicFilter(e.target.value)}
+          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm text-white focus:border-zinc-600 focus:outline-none"
+        >
+          <option value="ALL">All Topics</option>
+          {topics.map((t) => (
+            <option key={t.id} value={t.slug}>
+              {t.name} ({t._count?.problems || 0})
+            </option>
+          ))}
+        </select>
+
+        {topicFilter !== "ALL" && (
+          <button
+            onClick={() => setTopicFilter("ALL")}
+            className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Search and Bookmark Filter */}
@@ -191,8 +260,8 @@ export default function ProblemsPage() {
               <tr className="bg-zinc-900 text-zinc-400">
                 <th className="text-left px-4 py-3 font-medium w-10">Status</th>
                 <th className="text-left px-4 py-3 font-medium">Title</th>
+                <th className="text-left px-4 py-3 font-medium">Topic</th>
                 <th className="text-left px-4 py-3 font-medium">Difficulty</th>
-                <th className="text-left px-4 py-3 font-medium">Time Limit</th>
                 <th className="text-right px-4 py-3 font-medium">
                   Submissions
                 </th>
@@ -247,6 +316,23 @@ export default function ProblemsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3">
+                    {p.topic ? (
+                      <button
+                        onClick={() => setTopicFilter(p.topic!.slug)}
+                        className="px-2 py-0.5 text-xs rounded-full border transition-colors hover:opacity-80"
+                        style={{
+                          backgroundColor: `${p.topic.color}15`,
+                          borderColor: `${p.topic.color}40`,
+                          color: p.topic.color,
+                        }}
+                      >
+                        {p.topic.name}
+                      </button>
+                    ) : (
+                      <span className="text-zinc-600 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     <span
                       className={`font-medium ${
                         DIFFICULTY_COLORS[p.difficulty]
@@ -255,7 +341,6 @@ export default function ProblemsPage() {
                       {p.difficulty}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">{p.timeLimit}ms</td>
                   <td className="px-4 py-3 text-right text-zinc-400">
                     {p._count.submissions}
                   </td>
@@ -297,7 +382,7 @@ export default function ProblemsPage() {
               {filteredProblems.length === 0 && (
                 <tr>
                   <td
-                    colSpan={user ? 6 : 5}
+                    colSpan={user ? 7 : 6}
                     className="px-4 py-8 text-center text-zinc-500"
                   >
                     {showBookmarked
