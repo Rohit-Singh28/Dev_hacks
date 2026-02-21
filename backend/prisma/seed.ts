@@ -340,11 +340,261 @@ Only consider alphanumeric characters, ignoring case.
     update: {},
     create: { contestId: contest.id, userId: user2.id },
   });
+  const anagram = await prisma.problem.upsert({
+  where: { slug: "valid-anagram" },
+  update: {},
+  create: {
+    title: "Valid Anagram",
+    slug: "valid-anagram",
+    description: `Check if two strings are anagrams.`,
+    difficulty: "EASY",
+    timeLimit: 1000,
+    memoryLimit: 262144,
+    sampleInput: "anagram\nnagaram",
+    sampleOutput: "true",
+    constraints: "1 ≤ s.length ≤ 10^5",
+  },
+});
+
+await prisma.testCase.upsert({
+  where: { id: "tc-va-1" },
+  update: {},
+  create: {
+    id: "tc-va-1",
+    problemId: anagram.id,
+    input: "anagram\nnagaram",
+    output: "true",
+    isHidden: false,
+    orderIndex: 0,
+  },
+});
+
+await prisma.testCase.upsert({
+  where: { id: "tc-va-2" },
+  update: {},
+  create: {
+    id: "tc-va-2",
+    problemId: anagram.id,
+    input: "rat\ncar",
+    output: "false",
+    isHidden: true,
+    orderIndex: 1,
+  },
+});
+const maxElement = await prisma.problem.upsert({
+  where: { slug: "max-element" },
+  update: {},
+  create: {
+    title: "Maximum Element",
+    slug: "max-element",
+    description: `Find the maximum element in array.`,
+    difficulty: "EASY",
+    timeLimit: 1000,
+    memoryLimit: 262144,
+    sampleInput: "5\n1 3 5 2 4",
+    sampleOutput: "5",
+    constraints: "1 ≤ n ≤ 10^5",
+  },
+});
+
+await prisma.testCase.upsert({
+  where: { id: "tc-me-1" },
+  update: {},
+  create: {
+    id: "tc-me-1",
+    problemId: maxElement.id,
+    input: "5\n1 3 5 2 4",
+    output: "5",
+    isHidden: false,
+    orderIndex: 0,
+  },
+});
+const countEven = await prisma.problem.upsert({
+  where: { slug: "count-even" },
+  update: {},
+  create: {
+    title: "Count Even Numbers",
+    slug: "count-even",
+    description: `Count even integers in array.`,
+    difficulty: "EASY",
+    timeLimit: 1000,
+    memoryLimit: 262144,
+    sampleInput: "5\n1 2 3 4 6",
+    sampleOutput: "3",
+    constraints: "1 ≤ n ≤ 10^5",
+  },
+});
+
+await prisma.testCase.upsert({
+  where: { id: "tc-ce-1" },
+  update: {},
+  create: {
+    id: "tc-ce-1",
+    problemId: countEven.id,
+    input: "5\n1 2 3 4 6",
+    output: "3",
+    isHidden: false,
+    orderIndex: 0,
+  },
+});
+const binarySearch = await prisma.problem.upsert({
+  where: { slug: "binary-search" },
+  update: {},
+  create: {
+    title: "Binary Search",
+    slug: "binary-search",
+    description: `Return index of target else -1.`,
+    difficulty: "MEDIUM",
+    timeLimit: 1000,
+    memoryLimit: 262144,
+    sampleInput: "5\n1 2 3 4 5\n4",
+    sampleOutput: "3",
+    constraints: "1 ≤ n ≤ 10^5",
+  },
+});
+
+await prisma.testCase.upsert({
+  where: { id: "tc-bs-1" },
+  update: {},
+  create: {
+    id: "tc-bs-1",
+    problemId: binarySearch.id,
+    input: "5\n1 2 3 4 5\n4",
+    output: "3",
+    isHidden: false,
+    orderIndex: 0,
+  },
+});
+const substring = await prisma.problem.upsert({
+  where: { slug: "longest-substring" },
+  update: {},
+  create: {
+    title: "Longest Substring",
+    slug: "longest-substring",
+    description: `Longest substring without repeating characters.`,
+    difficulty: "MEDIUM",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "abcabcbb",
+    sampleOutput: "3",
+    constraints: "1 ≤ s.length ≤ 10^5",
+  },
+});
+const mergeIntervals = await prisma.problem.upsert({
+  where: { slug: "merge-intervals" },
+  update: {},
+  create: {
+    title: "Merge Intervals",
+    slug: "merge-intervals",
+    description: `Merge overlapping intervals.`,
+    difficulty: "MEDIUM",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "3\n1 3\n2 6\n8 10",
+    sampleOutput: "1 6\n8 10",
+    constraints: "1 ≤ n ≤ 10^4",
+  },
+});
+const islands = await prisma.problem.upsert({
+  where: { slug: "number-of-islands" },
+  update: {},
+  create: {
+    title: "Number of Islands",
+    slug: "number-of-islands",
+    description: `Count number of islands.`,
+    difficulty: "MEDIUM",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "2 2\n1 1\n0 1",
+    sampleOutput: "1",
+    constraints: "1 ≤ m,n ≤ 300",
+  },
+});
+const dijkstra = await prisma.problem.upsert({
+  where: { slug: "dijkstra" },
+  update: {},
+  create: {
+    title: "Dijkstra Shortest Path",
+    slug: "dijkstra",
+    description: `Find shortest path.`,
+    difficulty: "HARD",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "5 6",
+    sampleOutput: "0 2 4 5 6",
+    constraints: "1 ≤ V ≤ 10^5",
+  },
+});
+
+const segTree = await prisma.problem.upsert({
+  where: { slug: "segment-tree" },
+  update: {},
+  create: {
+    title: "Segment Tree",
+    slug: "segment-tree",
+    description: `Range Sum Query.`,
+    difficulty: "HARD",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "5\n1 3 5 7 9",
+    sampleOutput: "15",
+    constraints: "1 ≤ n ≤ 10^5",
+  },
+});
+
+const lru = await prisma.problem.upsert({
+  where: { slug: "lru-cache" },
+  update: {},
+  create: {
+    title: "LRU Cache",
+    slug: "lru-cache",
+    description: `Design LRU cache.`,
+    difficulty: "HARD",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "PUT 1 1",
+    sampleOutput: "1",
+    constraints: "1 ≤ capacity ≤ 3000",
+  },
+});
+
+const nQueens = await prisma.problem.upsert({
+  where: { slug: "n-queens" },
+  update: {},
+  create: {
+    title: "N Queens",
+    slug: "n-queens",
+    description: `Return number of solutions.`,
+    difficulty: "HARD",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "4",
+    sampleOutput: "2",
+    constraints: "1 ≤ n ≤ 14",
+  },
+});
+
+const wordLadder = await prisma.problem.upsert({
+  where: { slug: "word-ladder" },
+  update: {},
+  create: {
+    title: "Word Ladder",
+    slug: "word-ladder",
+    description: `Shortest transformation sequence.`,
+    difficulty: "HARD",
+    timeLimit: 2000,
+    memoryLimit: 262144,
+    sampleInput: "hit\ncog",
+    sampleOutput: "5",
+    constraints: "1 ≤ n ≤ 5000",
+  },
+});
 
   console.log("✅ Contest created & users registered");
   console.log(`📅 Contest starts at: ${contestStart.toISOString()}`);
   console.log("🌱 Seed complete!");
 }
+
 
 main()
   .catch((e) => {

@@ -33,6 +33,12 @@ export default function Navbar() {
           >
             Contests
           </Link>
+          <Link
+            href="/duels"
+            className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-semibold"
+          >
+            ⚔️ Duels
+          </Link>
         </div>
         <div className="flex items-center gap-4">
           {loading ? (

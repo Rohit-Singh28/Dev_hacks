@@ -28,7 +28,7 @@ export const submissionQueue = new Queue(QUEUE_NAME, {
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-interface SubmissionJobData {
+export interface SubmissionJobData {
   submissionId: string;
   userId: string;
   problemId: string;

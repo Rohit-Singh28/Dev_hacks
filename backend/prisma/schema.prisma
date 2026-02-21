@@ -20,9 +20,11 @@ model User {
 
     submissions         Submission[]
     contestParticipants ContestParticipant[]
+    duelParticipations  DuelParticipant[]
 
     @@index([username])
     @@index([email])
+    @@index([rating])
     @@map("users")
 }
 
@@ -48,9 +50,11 @@ model Problem {
     createdAt    DateTime   @default(now()) @map("created_at")
     updatedAt    DateTime   @updatedAt @map("updated_at")
 
-    testCases       TestCase[]
-    submissions     Submission[]
-    contestProblems ContestProblem[]
+    testCases                   TestCase[]
+    submissions                 Submission[]
+    contestProblems             ContestProblem[]
+    duelProblems                DuelProblem[]
+    duelParticipantSubmissions  DuelParticipantSubmission[]
 
     @@index([slug])
     @@index([difficulty])
@@ -179,10 +183,110 @@ model Submission {
     user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     problem Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
     contest Contest? @relation(fields: [contestId], references: [id], onDelete: SetNull)
+    duelParticipantSubmission DuelParticipantSubmission?
 
     @@index([userId, problemId])
     @@index([contestId, userId, problemId])
     @@index([verdict])
     @@index([createdAt])
     @@map("submissions")
+}
+
+// ─── Duels (1v1 Code Battles) ────────────────────────────────────────
+
+enum DuelStatus {
+    WAITING
+    IN_PROGRESS
+    COMPLETED
+    ABANDONED
+}
+
+enum DuelTimerOption {
+    TEN_MINS       // 10 minutes — 1 Easy
+    THIRTY_MINS    // 30 minutes — 1 Easy + 1 Medium
+    ONE_HOUR       // 1 hour     — 1 Easy + 1 Medium + 1 Hard
+}
+
+model Duel {
+    id          String           @id @default(uuid())
+    timerOption DuelTimerOption  @map("timer_option")
+    status      DuelStatus       @default(WAITING)
+    startedAt   DateTime?        @map("started_at")
+    endedAt     DateTime?        @map("ended_at")
+    createdAt   DateTime         @default(now()) @map("created_at")
+    updatedAt   DateTime         @updatedAt @map("updated_at")
+
+    problems     DuelProblem[]
+    participants DuelParticipant[]
+
+    @@index([status])
+    @@index([createdAt])
+    @@map("duels")
+}
+
+model DuelProblem {
+    id        String @id @default(uuid())
+    duelId    String @map("duel_id")
+    problemId String @map("problem_id")
+    label     String // "A", "B", "C"
+    orderIdx  Int    @default(0) @map("order_idx")
+
+    duel    Duel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
+    problem Problem @relation(fields: [problemId], references: [id])
+
+    @@unique([duelId, problemId])
+    @@unique([duelId, label])
+    @@index([duelId])
+    @@map("duel_problems")
+}
+
+model DuelParticipant {
+    id              String    @id @default(uuid())
+    duelId          String    @map("duel_id")
+    userId          String    @map("user_id")
+    ratingBefore    Int       @map("rating_before")
+    ratingAfter     Int?      @map("rating_after")
+    isWinner        Boolean?  @map("is_winner")
+    joinedAt        DateTime  @default(now()) @map("joined_at")
+
+    duel        Duel        @relation(fields: [duelId], references: [id], onDelete: Cascade)
+    user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    submissions DuelParticipantSubmission[]
+
+    @@unique([duelId, userId])
+    @@index([duelId])
+    @@index([userId])
+    @@map("duel_participants")
+}
+
+model DuelParticipantSubmission {
+    id              String    @id @default(uuid())
+    participantId   String    @map("participant_id")
+    problemId       String    @map("problem_id")
+    submissionId    String?   @map("submission_id") @unique
+    solved          Boolean   @default(false)
+    createdAt       DateTime  @default(now()) @map("created_at")
+
+    participant DuelParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+    problem     Problem         @relation(fields: [problemId], references: [id])
+    submission  Submission?     @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+
+    @@unique([participantId, problemId])
+    @@index([participantId])
+    @@map("duel_participant_submissions")
+}
+
+// ─── Duel Queue (for matchmaking) ────────────────────────────────────
+
+model DuelQueue {
+    id          String          @id @default(uuid())
+    userId      String          @map("user_id")
+    timerOption DuelTimerOption @map("timer_option")
+    minRating   Int             @map("min_rating")
+    maxRating   Int             @map("max_rating")
+    queuedAt    DateTime        @default(now()) @map("queued_at")
+
+    @@index([timerOption, minRating, maxRating])
+    @@index([userId])
+    @@map("duel_queues")
 }
