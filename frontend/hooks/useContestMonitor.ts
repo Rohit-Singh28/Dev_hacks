@@ -2,29 +2,36 @@
 
 /**
  * useContestMonitor — React hook that wires TabMonitor + ClipboardMonitor
- * into the component lifecycle.
+ * + ScreenMonitor (camera-based face detection) into the component lifecycle.
  *
  * Returns:
- *   • `terminated`    — boolean, true once the contest was auto-terminated.
- *   • `dialogState`   — the current warning/termination dialog config.
- *   • `dismissDialog` — callback to acknowledge a warning.
- *   • `tabSwitchCount`— live count for optional UI display.
+ *   • `terminated`          — boolean, true once the contest was auto-terminated.
+ *   • `dialogState`         — the current warning/termination dialog config.
+ *   • `dismissDialog`       — callback to acknowledge a warning.
+ *   • `tabSwitchCount`      — live count for optional UI display.
+ *   • `screenViolationCount`— live count of face-away violations.
+ *   • `cameraStream`        — MediaStream from the webcam (null until ready).
+ *   • `faceDetected`        — whether a face is currently visible.
+ *   • `cameraError`         — true if camera access was denied / failed.
  *
  * Usage:
- *   const { terminated, dialogState, dismissDialog } = useContestMonitor(contestId);
- *   // Render <WarningDialog {...dialogState} onDismiss={dismissDialog} />
- *   // Disable editor/buttons when `terminated` is true.
+ *   const m = useContestMonitor(contestId);
+ *   // Render <WarningDialog {...m.dialogState} onDismiss={m.dismissDialog} />
+ *   // Render <CameraFeed stream={m.cameraStream} faceDetected={m.faceDetected} />
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   TabMonitor,
   ClipboardMonitor,
+  ScreenMonitor,
   terminateContest,
   isContestTerminated,
 } from "@/lib/monitoring";
 
 const MAX_TAB_SWITCHES = 3;
+const MAX_SCREEN_VIOLATIONS = 3;
+const SCREEN_AWAY_THRESHOLD_MS = 10_000; // 10 seconds
 
 export interface DialogState {
   open: boolean;
@@ -44,31 +51,43 @@ export function useContestMonitor(contestId: string | null) {
   const [terminated, setTerminated] = useState(false);
   const [dialogState, setDialogState] = useState<DialogState>(INITIAL_DIALOG);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [screenViolationCount, setScreenViolationCount] = useState(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [faceDetected, setFaceDetected] = useState(true);
+  const [cameraError, setCameraError] = useState(false);
 
   // Refs to hold monitor instances so we can destroy them in cleanup.
   const tabMonitorRef = useRef<TabMonitor | null>(null);
   const clipboardMonitorRef = useRef<ClipboardMonitor | null>(null);
+  const screenMonitorRef = useRef<ScreenMonitor | null>(null);
 
   // ── Termination handler (shared by both monitors) ─────────────
 
   const handleTermination = useCallback(
-    async (reason: "tab_switch" | "clipboard_abuse") => {
+    async (reason: "tab_switch" | "clipboard_abuse" | "screen_away") => {
       if (!contestId) return;
+
+      const messages: Record<string, string> = {
+        tab_switch:
+          "Your contest has been terminated because you switched tabs or windows too many times. Your rating will not be updated for this contest.",
+        clipboard_abuse:
+          "Your contest has been terminated due to repeated clipboard usage (copy/paste/cut). Your rating will not be updated for this contest.",
+        screen_away:
+          "Your contest has been terminated because you were not detected in front of the screen too many times. Your rating will not be updated for this contest.",
+      };
 
       setTerminated(true);
       setDialogState({
         open: true,
         type: "terminated",
         title: "Contest Terminated",
-        message:
-          reason === "tab_switch"
-            ? "Your contest has been terminated because you switched tabs or windows too many times. Your rating will not be updated for this contest."
-            : "Your contest has been terminated due to repeated clipboard usage (copy/paste/cut). Your rating will not be updated for this contest.",
+        message: messages[reason],
       });
 
-      // Destroy both monitors to prevent further events.
+      // Destroy all monitors to prevent further events.
       tabMonitorRef.current?.destroy();
       clipboardMonitorRef.current?.destroy();
+      screenMonitorRef.current?.destroy();
 
       // Execute the full termination flow (localStorage + API + redirect).
       await terminateContest(contestId, reason);
@@ -143,20 +162,62 @@ export function useContestMonitor(contestId: string | null) {
       },
     });
 
+    // ── Screen Monitor (camera-based face detection) ──────────────
+
+    const screenMonitor = new ScreenMonitor({
+      maxViolations: MAX_SCREEN_VIOLATIONS,
+      awayThresholdMs: SCREEN_AWAY_THRESHOLD_MS,
+      contestId,
+
+      onViolation: (count: number) => {
+        setScreenViolationCount(count);
+        const remaining = MAX_SCREEN_VIOLATIONS - count;
+        setDialogState({
+          open: true,
+          type: "warning",
+          title: "Face Not Detected",
+          message:
+            remaining > 0
+              ? `You were not detected in front of the screen for more than 10 seconds. You have ${remaining} warning${remaining === 1 ? "" : "s"} remaining before your contest is automatically terminated.`
+              : "This is your final warning. Being away from the screen for over 10 seconds again will terminate your contest.",
+        });
+      },
+
+      onTerminate: () => {
+        handleTermination("screen_away");
+      },
+
+      onCameraReady: (stream: MediaStream) => {
+        setCameraStream(stream);
+      },
+
+      onCameraError: () => {
+        setCameraError(true);
+      },
+
+      onFaceStatusChange: (detected: boolean) => {
+        setFaceDetected(detected);
+      },
+    });
+
     tabMonitorRef.current = tabMonitor;
     clipboardMonitorRef.current = clipboardMonitor;
+    screenMonitorRef.current = screenMonitor;
 
-    // Hydrate tab switch count from persisted storage.
+    // Hydrate counts from persisted storage.
     setTabSwitchCount(tabMonitor.getCount());
+    setScreenViolationCount(screenMonitor.getCount());
 
-    // Start both monitors.
+    // Start all monitors.
     tabMonitor.start();
     clipboardMonitor.start();
+    screenMonitor.start(); // async — requests camera permission
 
     // ── Cleanup on unmount ───────────────────────────────────────
     return () => {
       tabMonitor.destroy();
       clipboardMonitor.destroy();
+      screenMonitor.destroy();
     };
   }, [contestId, handleTermination]);
 
@@ -174,5 +235,9 @@ export function useContestMonitor(contestId: string | null) {
     dialogState,
     dismissDialog,
     tabSwitchCount,
+    screenViolationCount,
+    cameraStream,
+    faceDetected,
+    cameraError,
   };
 }

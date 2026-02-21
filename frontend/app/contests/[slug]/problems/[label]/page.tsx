@@ -11,6 +11,7 @@ import CodeEditor from "@/components/CodeEditor";
 import ResultsPanel from "@/components/ResultsPanel";
 import ContestTimer from "@/components/ContestTimer";
 import WarningDialog from "@/components/WarningDialog";
+import CameraFeed from "@/components/CameraFeed";
 import { useContestMonitor } from "@/hooks/useContestMonitor";
 import type {
   Language,
@@ -74,9 +75,17 @@ export default function ContestProblemPage() {
 
   useContestRoom(data?.contestId ?? null);
 
-  // ── Contest Monitoring (tab switches, clipboard) ──────────────
-  const { terminated, dialogState, dismissDialog, tabSwitchCount } =
-    useContestMonitor(data?.contestId ?? null);
+  // ── Contest Monitoring (tab switches, clipboard, face detection) ──
+  const {
+    terminated,
+    dialogState,
+    dismissDialog,
+    tabSwitchCount,
+    screenViolationCount,
+    cameraStream,
+    faceDetected,
+    cameraError,
+  } = useContestMonitor(data?.contestId ?? null);
 
   useEffect(() => {
     async function fetch() {
@@ -217,6 +226,22 @@ export default function ContestProblemPage() {
         <div className="absolute top-2 right-4 z-30 rounded-full bg-amber-900/60 px-3 py-1 text-xs text-amber-300">
           Tab switches: {tabSwitchCount}/3
         </div>
+      )}
+
+      {/* Face-away violation indicator */}
+      {!terminated && screenViolationCount > 0 && (
+        <div className="absolute top-2 right-48 z-30 rounded-full bg-red-900/60 px-3 py-1 text-xs text-red-300">
+          Face-away: {screenViolationCount}/3
+        </div>
+      )}
+
+      {/* Camera feed (small floating preview) */}
+      {!terminated && (
+        <CameraFeed
+          stream={cameraStream}
+          faceDetected={faceDetected}
+          cameraError={cameraError}
+        />
       )}
 
       {/* Left Panel */}

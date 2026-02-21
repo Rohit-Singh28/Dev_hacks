@@ -11,6 +11,9 @@ export type { TabMonitorConfig } from "./tabMonitor";
 export { ClipboardMonitor } from "./clipboardMonitor";
 export type { ClipboardMonitorConfig } from "./clipboardMonitor";
 
+export { ScreenMonitor } from "./screenMonitor";
+export type { ScreenMonitorConfig } from "./screenMonitor";
+
 export {
   terminateContest,
   isContestTerminated,

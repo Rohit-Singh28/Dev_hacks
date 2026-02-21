@@ -25,7 +25,10 @@ function terminationReasonKey(contestId: string): string {
 
 // ── Public API ──────────────────────────────────────────────────────
 
-export type TerminationReason = "tab_switch" | "clipboard_abuse";
+export type TerminationReason =
+  | "tab_switch"
+  | "clipboard_abuse"
+  | "screen_away";
 
 /**
  * Check whether this contest has already been terminated for the user.
@@ -93,6 +96,7 @@ export function clearMonitoringData(contestId: string): void {
   const keys = [
     `cm_tab_switches_${contestId}`,
     `cm_clipboard_count_${contestId}`,
+    `cm_screen_violations_${contestId}`,
     terminatedKey(contestId),
     terminationReasonKey(contestId),
   ];
