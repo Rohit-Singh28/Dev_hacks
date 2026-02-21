@@ -19,6 +19,7 @@ export interface Problem {
   sampleOutput?: string;
   constraints?: string;
   testCases: VisibleTestCase[];
+  hints?: Hint[];
   _count?: { submissions: number };
 }
 
@@ -27,6 +28,30 @@ export interface VisibleTestCase {
   input: string;
   output: string;
   orderIndex: number;
+}
+
+export interface Hint {
+  id: string;
+  content: string;
+  orderIdx: number;
+}
+
+export interface Bookmark {
+  id: string;
+  problemId: string;
+  note?: string;
+  createdAt: string;
+  problem?: ProblemListItem;
+}
+
+export interface ProblemListItem {
+  id: string;
+  title: string;
+  slug: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  timeLimit: number;
+  memoryLimit: number;
+  _count: { submissions: number };
 }
 
 export type Language = "CPP" | "PYTHON" | "JAVA";
@@ -109,4 +134,38 @@ export interface SubmissionUpdate {
   memoryUsed?: number;
   compileOutput?: string;
   testResults?: TestCaseResult[];
+}
+
+// ─── User Profile / Stats Types ──────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  rating: number;
+  createdAt: string;
+}
+
+export interface UserStats {
+  totalSolved: number;
+  difficultyCounts: { EASY: number; MEDIUM: number; HARD: number };
+  totalSubmissions: number;
+  acceptedSubmissions: number;
+  acceptanceRate: number;
+  contestsParticipated: number;
+  languageStats: { language: string; count: number }[];
+}
+
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  totalActiveDays: number;
+  heatmap: { date: string; count: number; submissions: number }[];
+}
+
+export interface RecentSubmission {
+  id: string;
+  verdict: Verdict;
+  language: Language;
+  createdAt: string;
+  problem: { title: string; slug: string; difficulty: string };
 }

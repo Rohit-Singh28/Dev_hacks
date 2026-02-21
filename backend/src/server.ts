@@ -14,6 +14,8 @@ import authRoutes from "./routes/auth";
 import problemRoutes from "./routes/problems";
 import submissionRoutes from "./routes/submissions";
 import contestRoutes from "./routes/contests";
+import bookmarkRoutes from "./routes/bookmarks";
+import userRoutes from "./routes/users";
 
 const app = express();
 const server = http.createServer(app);
@@ -67,6 +69,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/problems", problemRoutes);
 app.use("/api/submissions", submissionLimiter, submissionRoutes);
 app.use("/api/contests", contestRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
+app.use("/api/users", userRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────────
 

@@ -20,6 +20,8 @@ model User {
 
     submissions         Submission[]
     contestParticipants ContestParticipant[]
+    bookmarks           Bookmark[]
+    dailyActivities     DailyActivity[]
 
     @@index([username])
     @@index([email])
@@ -51,6 +53,8 @@ model Problem {
     testCases       TestCase[]
     submissions     Submission[]
     contestProblems ContestProblem[]
+    bookmarks       Bookmark[]
+    hints           Hint[]
 
     @@index([slug])
     @@index([difficulty])
@@ -185,4 +189,51 @@ model Submission {
     @@index([verdict])
     @@index([createdAt])
     @@map("submissions")
+}
+
+// ─── Bookmarks ───────────────────────────────────────────────────────
+
+model Bookmark {
+    id        String   @id @default(uuid())
+    userId    String   @map("user_id")
+    problemId String   @map("problem_id")
+    note      String?  @db.Text
+    createdAt DateTime @default(now()) @map("created_at")
+
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, problemId])
+    @@index([userId])
+    @@map("bookmarks")
+}
+
+// ─── Hints ───────────────────────────────────────────────────────────
+
+model Hint {
+    id        String @id @default(uuid())
+    problemId String @map("problem_id")
+    content   String @db.Text
+    orderIdx  Int    @default(0) @map("order_idx")
+
+    problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+    @@index([problemId])
+    @@map("hints")
+}
+
+// ─── Daily Activity (streak tracking) ────────────────────────────────
+
+model DailyActivity {
+    id              String   @id @default(uuid())
+    userId          String   @map("user_id")
+    date            DateTime @db.Date
+    solvedCount     Int      @default(0) @map("solved_count")
+    submissionCount Int      @default(0) @map("submission_count")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, date])
+    @@index([userId, date])
+    @@map("daily_activities")
 }

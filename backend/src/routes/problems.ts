@@ -8,8 +8,13 @@ const router = Router();
 
 router.get("/", async (req: Request, res: Response): Promise<void> => {
   const page = Math.max(1, parseInt(String(req.query.page ?? "1")));
-  const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? "20"))));
-  const difficulty = req.query.difficulty ? String(req.query.difficulty) : undefined;
+  const limit = Math.min(
+    50,
+    Math.max(1, parseInt(String(req.query.limit ?? "20"))),
+  );
+  const difficulty = req.query.difficulty
+    ? String(req.query.difficulty)
+    : undefined;
   const search = req.query.search ? String(req.query.search) : undefined;
 
   const where: any = {};
@@ -68,6 +73,14 @@ router.get(
             orderIndex: true,
           },
         },
+        hints: {
+          orderBy: { orderIdx: "asc" },
+          select: {
+            id: true,
+            content: true,
+            orderIdx: true,
+          },
+        },
         _count: {
           select: { submissions: true },
         },
@@ -100,7 +113,7 @@ router.get(
     }
 
     res.json({ problem, userSubmissions });
-  }
+  },
 );
 
 export default router;
