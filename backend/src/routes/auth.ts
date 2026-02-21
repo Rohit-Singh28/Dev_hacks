@@ -6,8 +6,13 @@ import { prisma } from "../lib/prisma";
 import { config } from "../config";
 import { validate } from "../middleware/validate";
 import { authMiddleware } from "../middleware/auth";
+import { redis } from "../lib/redis";
+import crypto from "crypto";
 
 const router = Router();
+
+// Session TTL — 24 hours (in seconds)
+const SESSION_TTL = 24 * 60 * 60;
 
 // ─── Schemas ─────────────────────────────────────────────────────────
 
@@ -25,6 +30,28 @@ const loginSchema = z.object({
   usernameOrEmail: z.string().min(1),
   password: z.string().min(1),
 });
+
+/**
+ * Create a Redis session and return the session ID + JWT token.
+ */
+async function createSession(user: { id: string; username: string }) {
+  const sessionId = crypto.randomUUID();
+  const token = jwt.sign(
+    { userId: user.id, username: user.username, sessionId },
+    config.jwt.secret,
+    { expiresIn: "24h" }
+  );
+
+  // Store session in Redis with TTL
+  await redis.set(
+    `session:${sessionId}`,
+    JSON.stringify({ userId: user.id, username: user.username }),
+    "EX",
+    SESSION_TTL
+  );
+
+  return { sessionId, token };
+}
 
 // ─── Register ────────────────────────────────────────────────────────
 
@@ -54,11 +81,16 @@ router.post(
       select: { id: true, username: true, email: true, rating: true },
     });
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      config.jwt.secret,
-      { expiresIn: "7d" }
-    );
+    const { sessionId, token } = await createSession(user);
+
+    // Set httpOnly session cookie (no maxAge = cleared when browser closes)
+    res.cookie("session_id", sessionId, {
+      httpOnly: true,
+      secure: config.env === "production",
+      sameSite: "lax",
+      path: "/",
+      // No maxAge/expires — this makes it a session cookie
+    });
 
     res.status(201).json({ user, token });
   }
@@ -83,11 +115,15 @@ router.post(
       return;
     }
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      config.jwt.secret,
-      { expiresIn: "7d" }
-    );
+    const { sessionId, token } = await createSession(user);
+
+    // Set httpOnly session cookie (no maxAge = cleared when browser closes)
+    res.cookie("session_id", sessionId, {
+      httpOnly: true,
+      secure: config.env === "production",
+      sameSite: "lax",
+      path: "/",
+    });
 
     res.json({
       user: {
@@ -98,6 +134,42 @@ router.post(
       },
       token,
     });
+  }
+);
+
+// ─── Logout ──────────────────────────────────────────────────────────
+
+router.post(
+  "/logout",
+  async (req: Request, res: Response): Promise<void> => {
+    // Delete Redis session
+    const sessionId = req.cookies?.session_id;
+    if (sessionId) {
+      await redis.del(`session:${sessionId}`);
+    }
+
+    // Also try to extract sessionId from JWT in Authorization header
+    const header = req.headers.authorization;
+    if (header?.startsWith("Bearer ")) {
+      try {
+        const payload = jwt.verify(header.slice(7), config.jwt.secret) as any;
+        if (payload.sessionId) {
+          await redis.del(`session:${payload.sessionId}`);
+        }
+      } catch {
+        // Token expired or invalid — that's fine during logout
+      }
+    }
+
+    // Clear session cookie
+    res.clearCookie("session_id", {
+      httpOnly: true,
+      secure: config.env === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    res.json({ success: true });
   }
 );
 

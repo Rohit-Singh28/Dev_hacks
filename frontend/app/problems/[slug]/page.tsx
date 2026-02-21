@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/authStore";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants";
 import CodeEditor from "@/components/CodeEditor";
 import ResultsPanel from "@/components/ResultsPanel";
+import AIChatPanel from "@/components/AIChatPanel";
 import type {
   Problem,
   Language,
@@ -42,11 +43,13 @@ export default function ProblemDetailPage() {
   const [code, setCode] = useState(LANGUAGE_DEFAULTS.CPP);
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const isSubmitRef = useRef(false);
 
   // Results state
   const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(
     null,
   );
+  const activeSubIdRef = useRef<string | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
   const [compileOutput, setCompileOutput] = useState<string | null>(null);
@@ -56,8 +59,12 @@ export default function ProblemDetailPage() {
   const [testsTotal, setTestsTotal] = useState(0);
   const [judging, setJudging] = useState(false);
 
+  // AI Review state
+  const [aiReview, setAiReview] = useState<string | null>(null);
+  const [aiReviewLoading, setAiReviewLoading] = useState(false);
+
   // Tab state
-  const [activeTab, setActiveTab] = useState<"description" | "submissions">(
+  const [activeTab, setActiveTab] = useState<"description" | "submissions" | "review">(
     "description",
   );
 
@@ -89,54 +96,155 @@ export default function ProblemDetailPage() {
     fetch();
   }, [slug, router, user]);
 
-  // WebSocket submission updates
+  // Auto-trigger AI review after judging
+  const triggerAiReview = useCallback(
+    async (verdictVal: string, results: TestCaseResult[]) => {
+      if (!problem) return;
+      setAiReviewLoading(true);
+      setAiReview(null);
+      setActiveTab("review");
+      try {
+        const { data } = await api.post("/ai/review", {
+          problemId: problem.id,
+          code,
+          language,
+          verdict: verdictVal,
+          testResults: results.map((r, i) => ({
+            index: i,
+            passed: r.passed,
+            input: r.input,
+            expectedOutput: r.expectedOutput,
+            actualOutput: r.actualOutput || null,
+            statusDescription: r.statusDescription,
+          })),
+          executionTime: null,
+          memoryUsed: null,
+        });
+        setAiReview(data.review);
+        setActiveTab("review");
+      } catch (err: any) {
+        console.error("AI review error:", err.response?.data || err.message);
+        setAiReview("AI review is temporarily unavailable.");
+        setActiveTab("review");
+      } finally {
+        setAiReviewLoading(false);
+      }
+    },
+    [problem, code, language],
+  );
+
+  // ─── Submission Handling ───────────────────────────────────────────
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const triggerAiReviewRef = useRef(triggerAiReview);
+  triggerAiReviewRef.current = triggerAiReview;
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => stopPolling(), [stopPolling]);
+
+  // Apply final results to UI
+  const applyResults = useCallback(
+    (v: Verdict, extra: {
+      testResults?: TestCaseResult[];
+      compileOutput?: string | null;
+      executionTime?: number | null;
+      memoryUsed?: number | null;
+      testsPassed?: number;
+      testsTotal?: number;
+    }) => {
+      stopPolling();
+      setVerdict(v);
+      setTestResults(extra.testResults || []);
+      setCompileOutput(extra.compileOutput || null);
+      setExecutionTime(extra.executionTime || null);
+      setMemoryUsed(extra.memoryUsed || null);
+      setTestsPassed(extra.testsPassed || 0);
+      setTestsTotal(extra.testsTotal || 0);
+      setJudging(false);
+      setRunning(false);
+      setSubmitting(false);
+    },
+    [stopPolling],
+  );
+
+  // Poll GET /submissions/:id until verdict is final
+  const startPolling = useCallback(
+    (subId: string) => {
+      stopPolling();
+      pollingRef.current = setInterval(async () => {
+        try {
+          const { data } = await api.get(`/submissions/${subId}`);
+          const s = data.submission;
+          if (s.verdict && s.verdict !== "PENDING" && s.verdict !== "RUNNING") {
+            applyResults(s.verdict, {
+              testResults: s.testResults || [],
+              compileOutput: s.compileOutput,
+              executionTime: s.executionTime,
+              memoryUsed: s.memoryUsed,
+              testsPassed: s.testsPassed,
+              testsTotal: s.testsTotal,
+            });
+            if (isSubmitRef.current) {
+              triggerAiReviewRef.current(s.verdict, []);
+            }
+          }
+        } catch { /* ignore */ }
+      }, 2000);
+    },
+    [stopPolling, applyResults],
+  );
+
+  // WebSocket bonus — if it delivers faster than polling, great
   const handleSubmissionUpdate = useCallback(
     (update: SubmissionUpdate) => {
-      if (update.submissionId !== activeSubmissionId) return;
-
+      if (update.submissionId !== activeSubIdRef.current) return;
       if (update.verdict === "RUNNING") {
         setJudging(true);
         setVerdict("RUNNING");
         return;
       }
-
-      setJudging(false);
-      setRunning(false);
-      setSubmitting(false);
-      setVerdict(update.verdict);
-      setTestResults(update.testResults || []);
-      setCompileOutput(update.compileOutput || null);
-      setExecutionTime(update.executionTime || null);
-      setMemoryUsed(update.memoryUsed || null);
-      setTestsPassed(update.testsPassed || 0);
-      setTestsTotal(update.testsTotal || 0);
+      applyResults(update.verdict, {
+        testResults: update.testResults,
+        compileOutput: update.compileOutput,
+        executionTime: update.executionTime,
+        memoryUsed: update.memoryUsed,
+        testsPassed: update.testsPassed,
+        testsTotal: update.testsTotal,
+      });
+      if (isSubmitRef.current) {
+        triggerAiReviewRef.current(update.verdict as string, update.testResults || []);
+      }
     },
-    [activeSubmissionId],
+    [applyResults],
   );
 
   useSubmissionUpdates(handleSubmissionUpdate);
 
   // Run Code
   const handleRun = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!user) { router.push("/login"); return; }
     if (!problem) return;
 
+    stopPolling();
     setRunning(true);
     setJudging(true);
+    isSubmitRef.current = false;
     setVerdict(null);
     setTestResults([]);
     setCompileOutput(null);
 
     try {
       const { data } = await api.post("/submissions/run", {
-        problemId: problem.id,
-        language,
-        sourceCode: code,
+        problemId: problem.id, language, sourceCode: code,
       });
       setActiveSubmissionId(data.submissionId);
+      activeSubIdRef.current = data.submissionId;
+      startPolling(data.submissionId);
     } catch (err: any) {
       setRunning(false);
       setJudging(false);
@@ -146,25 +254,24 @@ export default function ProblemDetailPage() {
 
   // Submit Solution
   const handleSubmit = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!user) { router.push("/login"); return; }
     if (!problem) return;
 
+    stopPolling();
     setSubmitting(true);
     setJudging(true);
+    isSubmitRef.current = true;
     setVerdict(null);
     setTestResults([]);
     setCompileOutput(null);
 
     try {
       const { data } = await api.post("/submissions/submit", {
-        problemId: problem.id,
-        language,
-        sourceCode: code,
+        problemId: problem.id, language, sourceCode: code,
       });
       setActiveSubmissionId(data.submissionId);
+      activeSubIdRef.current = data.submissionId;
+      startPolling(data.submissionId);
     } catch (err: any) {
       setSubmitting(false);
       setJudging(false);
@@ -209,27 +316,61 @@ export default function ProblemDetailPage() {
           <div className="flex gap-4 border-b border-zinc-800 mb-4">
             <button
               onClick={() => setActiveTab("description")}
-              className={`pb-2 text-sm font-medium transition-colors ${
-                activeTab === "description"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              className={`pb-2 text-sm font-medium transition-colors ${activeTab === "description"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-zinc-400 hover:text-white"
+                }`}
             >
               Description
             </button>
             <button
               onClick={() => setActiveTab("submissions")}
-              className={`pb-2 text-sm font-medium transition-colors ${
-                activeTab === "submissions"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              className={`pb-2 text-sm font-medium transition-colors ${activeTab === "submissions"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-zinc-400 hover:text-white"
+                }`}
             >
               Submissions
             </button>
+            {(aiReview || aiReviewLoading) && (
+              <button
+                onClick={() => setActiveTab("review")}
+                className={`pb-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${activeTab === "review"
+                  ? "text-white border-b-2 border-purple-500"
+                  : "text-zinc-400 hover:text-white"
+                  }`}
+              >
+                🤖 AI Review
+                {aiReviewLoading && (
+                  <span className="inline-block w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
+                )}
+              </button>
+            )}
           </div>
 
-          {activeTab === "description" ? (
+          {activeTab === "review" ? (
+            <div>
+              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                🤖 AI Code Review
+              </h2>
+              {aiReviewLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="flex gap-1.5 text-purple-400">
+                    <span className="animate-bounce text-lg" style={{ animationDelay: "0ms" }}>●</span>
+                    <span className="animate-bounce text-lg" style={{ animationDelay: "150ms" }}>●</span>
+                    <span className="animate-bounce text-lg" style={{ animationDelay: "300ms" }}>●</span>
+                  </div>
+                  <p className="text-sm text-zinc-500">Analyzing your code...</p>
+                </div>
+              ) : aiReview ? (
+                <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
+                  {aiReview}
+                </pre>
+              ) : (
+                <p className="text-sm text-zinc-500">No review available yet. Submit your code to get an AI review.</p>
+              )}
+            </div>
+          ) : activeTab === "description" ? (
             <>
               <div className="flex items-center justify-between mb-2">
                 <h1 className="text-xl font-bold text-white">
@@ -242,11 +383,10 @@ export default function ProblemDetailPage() {
                     title={bookmarked ? "Remove bookmark" : "Bookmark problem"}
                   >
                     <svg
-                      className={`h-5 w-5 ${
-                        bookmarked
-                          ? "text-yellow-400"
-                          : "text-zinc-500 hover:text-zinc-300"
-                      }`}
+                      className={`h-5 w-5 ${bookmarked
+                        ? "text-yellow-400"
+                        : "text-zinc-500 hover:text-zinc-300"
+                        }`}
                       fill={bookmarked ? "currentColor" : "none"}
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -263,9 +403,8 @@ export default function ProblemDetailPage() {
               </div>
               <div className="flex gap-3 mb-4">
                 <span
-                  className={`text-sm font-medium ${
-                    DIFFICULTY_COLORS[problem.difficulty]
-                  }`}
+                  className={`text-sm font-medium ${DIFFICULTY_COLORS[problem.difficulty]
+                    }`}
                 >
                   {problem.difficulty}
                 </span>
@@ -406,9 +545,8 @@ export default function ProblemDetailPage() {
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-sm font-medium ${
-                          VERDICT_COLORS[s.verdict]
-                        }`}
+                        className={`text-sm font-medium ${VERDICT_COLORS[s.verdict]
+                          }`}
                       >
                         {VERDICT_LABELS[s.verdict]}
                       </span>
@@ -458,8 +596,13 @@ export default function ProblemDetailPage() {
             testsTotal={testsTotal}
             loading={judging}
           />
+
+
         </div>
       </div>
+
+      {/* AI Chat Panel */}
+      {problem && <AIChatPanel problemId={problem.id} isLoggedIn={!!user} />}
     </div>
   );
 }

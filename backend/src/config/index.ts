@@ -17,6 +17,9 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   },
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+  },
   // Language ID mapping for Judge0 CE
   languageMap: {
     CPP: 54,

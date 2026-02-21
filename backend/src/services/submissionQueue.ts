@@ -238,20 +238,29 @@ async function processSubmission(job: Job<SubmissionJobData>): Promise<void> {
       isNewSolve = previousAC === 0;
     }
 
-    await prisma.dailyActivity.upsert({
-      where: { userId_date: { userId, date: today } },
-      update: {
-        submissionCount: { increment: 1 },
-        ...(isNewSolve ? { solvedCount: { increment: 1 } } : {}),
-      },
-      create: {
-        userId,
-        date: today,
-        submissionCount: 1,
-        solvedCount: isNewSolve ? 1 : 0,
-      },
-    });
+    // Atomic upsert using raw SQL to avoid race conditions
+    const solvedInc = isNewSolve ? 1 : 0;
+    await prisma.$executeRaw`
+      INSERT INTO daily_activities (id, user_id, date, submission_count, solved_count)
+      VALUES (UUID(), ${userId}, ${today}, 1, ${solvedInc})
+      ON DUPLICATE KEY UPDATE
+        submission_count = submission_count + 1,
+        solved_count = solved_count + ${solvedInc}
+    `;
   }
+
+  // Cache test results in Redis for polling fallback (5 min TTL)
+  const sanitizedResults = testResults.map((tr) => ({
+    ...tr,
+    input: tr.isHidden ? "[hidden]" : tr.input,
+    expectedOutput: tr.isHidden ? "[hidden]" : tr.expectedOutput,
+  }));
+  await redis.set(
+    `submission-results:${submissionId}`,
+    JSON.stringify(sanitizedResults),
+    "EX",
+    300,
+  );
 
   // Emit real-time result
   emitSubmissionUpdate(userId, {
@@ -262,12 +271,7 @@ async function processSubmission(job: Job<SubmissionJobData>): Promise<void> {
     executionTime: Math.round(maxTime),
     memoryUsed: Math.round(maxMemory),
     compileOutput,
-    testResults: testResults.map((tr) => ({
-      ...tr,
-      // Never expose hidden test case inputs/expected outputs to the client
-      input: tr.isHidden ? "[hidden]" : tr.input,
-      expectedOutput: tr.isHidden ? "[hidden]" : tr.expectedOutput,
-    })),
+    testResults: sanitizedResults,
   });
 }
 

@@ -2,6 +2,7 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { config } from "./config";
 import { initWebSocket } from "./websocket";
@@ -18,6 +19,7 @@ import duelRoutes from "./routes/duels";
 import bookmarkRoutes from "./routes/bookmarks";
 import userRoutes from "./routes/users";
 import roomRoutes from "./routes/rooms";
+import aiRoutes from "./routes/ai";
 
 const app = express();
 const server = http.createServer(app);
@@ -51,6 +53,7 @@ const submissionLimiter = rateLimit({
   message: { error: "Submission rate limit exceeded" },
 });
 
+app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -75,6 +78,7 @@ app.use("/api/duels", duelRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────────
 

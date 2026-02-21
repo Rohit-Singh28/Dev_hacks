@@ -14,7 +14,7 @@ interface AuthState {
     email: string,
     password: string
   ) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   hydrate: () => void;
 }
 
@@ -28,8 +28,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       usernameOrEmail,
       password,
     });
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    // Use sessionStorage — cleared when tab/browser closes
+    sessionStorage.setItem("token", data.token);
+    sessionStorage.setItem("user", JSON.stringify(data.user));
     set({ user: data.user, token: data.token });
   },
 
@@ -39,14 +40,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       email,
       password,
     });
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    sessionStorage.setItem("token", data.token);
+    sessionStorage.setItem("user", JSON.stringify(data.user));
     set({ user: data.user, token: data.token });
   },
 
-  logout: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  logout: async () => {
+    // Call backend to delete Redis session
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // Ignore errors during logout
+    }
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     set({ user: null, token: null });
   },
 
@@ -55,8 +62,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
       return;
     }
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
+    // Read from sessionStorage only — no persistent login across tabs
+    const token = sessionStorage.getItem("token");
+    const userStr = sessionStorage.getItem("user");
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);

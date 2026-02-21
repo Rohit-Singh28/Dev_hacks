@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { redis } from "../lib/redis";
 import { authMiddleware } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { enqueueSubmission } from "../services/submissionQueue";
@@ -184,7 +185,14 @@ router.get(
       return;
     }
 
-    res.json({ submission });
+    // Fetch cached test results from Redis if available
+    let testResults = null;
+    try {
+      const cached = await redis.get(`submission-results:${submission.id}`);
+      if (cached) testResults = JSON.parse(cached);
+    } catch { /* ignore */ }
+
+    res.json({ submission: { ...submission, testResults } });
   }
 );
 

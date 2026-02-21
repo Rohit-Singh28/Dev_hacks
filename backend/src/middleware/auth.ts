@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config";
+import { redis } from "../lib/redis";
 
 export interface AuthPayload {
   userId: string;
   username: string;
+  sessionId?: string;
 }
 
 declare global {
@@ -29,8 +31,29 @@ export function authMiddleware(
   const token = header.slice(7);
   try {
     const payload = jwt.verify(token, config.jwt.secret) as AuthPayload;
-    req.user = payload;
-    next();
+
+    // Validate Redis session if sessionId is present
+    if (payload.sessionId) {
+      redis
+        .get(`session:${payload.sessionId}`)
+        .then((session) => {
+          if (!session) {
+            res.status(401).json({ error: "Session expired or logged out" });
+            return;
+          }
+          req.user = payload;
+          next();
+        })
+        .catch(() => {
+          // Redis error — allow through with just JWT validation
+          req.user = payload;
+          next();
+        });
+    } else {
+      // Legacy token without sessionId — still accept for backward compat
+      req.user = payload;
+      next();
+    }
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
   }
