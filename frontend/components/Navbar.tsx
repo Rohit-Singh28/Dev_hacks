@@ -49,6 +49,22 @@ export default function Navbar() {
           >
             Contests
           </Link>
+          {user && (
+            <>
+              <Link
+                href="/host"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Host
+              </Link>
+              <Link
+                href="/join"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Join Room
+              </Link>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {loading ? (

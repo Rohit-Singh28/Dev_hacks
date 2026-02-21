@@ -22,6 +22,8 @@ model User {
     contestParticipants ContestParticipant[]
     bookmarks           Bookmark[]
     dailyActivities     DailyActivity[]
+    hostedRooms         Room[]               @relation("RoomHost")
+    roomParticipants    RoomParticipant[]
 
     @@index([username])
     @@index([email])
@@ -53,6 +55,7 @@ model Problem {
     testCases       TestCase[]
     submissions     Submission[]
     contestProblems ContestProblem[]
+    roomProblems    RoomProblem[]
     bookmarks       Bookmark[]
     hints           Hint[]
 
@@ -168,6 +171,7 @@ model Submission {
     userId        String   @map("user_id")
     problemId     String   @map("problem_id")
     contestId     String?  @map("contest_id")
+    roomId        String?  @map("room_id")
     language      Language
     sourceCode    String   @map("source_code") @db.Text
     verdict       Verdict  @default(PENDING)
@@ -183,9 +187,11 @@ model Submission {
     user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     problem Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
     contest Contest? @relation(fields: [contestId], references: [id], onDelete: SetNull)
+    room    Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
 
     @@index([userId, problemId])
     @@index([contestId, userId, problemId])
+    @@index([roomId, userId, problemId])
     @@index([verdict])
     @@index([createdAt])
     @@map("submissions")
@@ -236,4 +242,73 @@ model DailyActivity {
     @@unique([userId, date])
     @@index([userId, date])
     @@map("daily_activities")
+}
+
+// ─── Rooms (User-Hosted Contests) ───────────────────────────────────
+
+enum RoomStatus {
+    WAITING
+    ACTIVE
+    ENDED
+}
+
+model Room {
+    id        String     @id @default(uuid())
+    roomCode  String     @unique @map("room_code")
+    title     String
+    hostId    String     @map("host_id")
+    status    RoomStatus @default(WAITING)
+    duration  Int        @default(60) // minutes
+    startTime DateTime?  @map("start_time")
+    endTime   DateTime?  @map("end_time")
+    createdAt DateTime   @default(now()) @map("created_at")
+    updatedAt DateTime   @updatedAt @map("updated_at")
+
+    host             User              @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+    roomProblems     RoomProblem[]
+    roomParticipants RoomParticipant[]
+    submissions      Submission[]
+
+    @@index([roomCode])
+    @@index([hostId])
+    @@index([status])
+    @@map("rooms")
+}
+
+// ─── Room ↔ Problem (many-to-many with ordering) ────────────────────
+
+model RoomProblem {
+    id        String @id @default(uuid())
+    roomId    String @map("room_id")
+    problemId String @map("problem_id")
+    label     String // "A", "B", "C", "D"
+    points    Int    @default(100)
+    orderIdx  Int    @default(0) @map("order_idx")
+
+    room    Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+    problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+    @@unique([roomId, problemId])
+    @@unique([roomId, label])
+    @@index([roomId])
+    @@map("room_problems")
+}
+
+// ─── Room Participants ───────────────────────────────────────────────
+
+model RoomParticipant {
+    id       String   @id @default(uuid())
+    roomId   String   @map("room_id")
+    userId   String   @map("user_id")
+    score    Int      @default(0)
+    penalty  Int      @default(0)
+    rank     Int?
+    joinedAt DateTime @default(now()) @map("joined_at")
+
+    room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([roomId, userId])
+    @@index([roomId, score, penalty])
+    @@map("room_participants")
 }

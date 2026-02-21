@@ -16,6 +16,7 @@ import submissionRoutes from "./routes/submissions";
 import contestRoutes from "./routes/contests";
 import bookmarkRoutes from "./routes/bookmarks";
 import userRoutes from "./routes/users";
+import roomRoutes from "./routes/rooms";
 
 const app = express();
 const server = http.createServer(app);
@@ -71,6 +72,7 @@ app.use("/api/submissions", submissionLimiter, submissionRoutes);
 app.use("/api/contests", contestRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/rooms", roomRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────────
 

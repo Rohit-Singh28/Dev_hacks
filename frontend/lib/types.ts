@@ -169,3 +169,44 @@ export interface RecentSubmission {
   createdAt: string;
   problem: { title: string; slug: string; difficulty: string };
 }
+
+// ─── Room Types ──────────────────────────────────────────────────────
+
+export interface Room {
+  id: string;
+  roomCode: string;
+  title: string;
+  hostId: string;
+  host?: { id: string; username: string };
+  status: "WAITING" | "ACTIVE" | "ENDED";
+  duration: number;
+  startTime?: string;
+  endTime?: string;
+  createdAt: string;
+  roomProblems: RoomProblem[];
+  roomParticipants?: RoomParticipantInfo[];
+  _count?: { roomParticipants: number; roomProblems: number };
+}
+
+export interface RoomProblem {
+  id: string;
+  label: string;
+  points: number;
+  orderIdx: number;
+  problem: {
+    id: string;
+    title: string;
+    slug: string;
+    difficulty: string;
+  };
+}
+
+export interface RoomParticipantInfo {
+  id: string;
+  userId: string;
+  score: number;
+  penalty: number;
+  rank?: number;
+  joinedAt: string;
+  user: { id: string; username: string; rating: number };
+}
