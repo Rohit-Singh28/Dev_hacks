@@ -65,7 +65,8 @@ async function main() {
     create: {
       name: "Arrays",
       slug: "arrays",
-      description: "Problems involving array manipulation, traversal, and operations",
+      description:
+        "Problems involving array manipulation, traversal, and operations",
       icon: "grid",
       color: "#3B82F6",
       orderIndex: 1,
@@ -117,7 +118,8 @@ async function main() {
     create: {
       name: "Sliding Window",
       slug: "sliding-window",
-      description: "Sliding window technique for subarray and substring problems",
+      description:
+        "Sliding window technique for subarray and substring problems",
       icon: "window",
       color: "#EC4899",
       orderIndex: 5,
@@ -929,7 +931,10 @@ Only consider alphanumeric characters, ignoring case.
   // Link problems to live contest
   await prisma.contestProblem.upsert({
     where: {
-      contestId_problemId: { contestId: liveContest.id, problemId: maxElement.id },
+      contestId_problemId: {
+        contestId: liveContest.id,
+        problemId: maxElement.id,
+      },
     },
     update: {},
     create: {
@@ -943,7 +948,10 @@ Only consider alphanumeric characters, ignoring case.
 
   await prisma.contestProblem.upsert({
     where: {
-      contestId_problemId: { contestId: liveContest.id, problemId: binarySearch.id },
+      contestId_problemId: {
+        contestId: liveContest.id,
+        problemId: binarySearch.id,
+      },
     },
     update: {},
     create: {
@@ -1070,13 +1078,17 @@ Only consider alphanumeric characters, ignoring case.
   let subCounter = 0;
 
   const languages: Language[] = ["CPP", "PYTHON", "JAVA"];
-  const failStatuses: Verdict[] = ["WRONG_ANSWER", "TIME_LIMIT_EXCEEDED", "RUNTIME_ERROR"];
+  const failStatuses: Verdict[] = [
+    "WRONG_ANSWER",
+    "TIME_LIMIT_EXCEEDED",
+    "RUNTIME_ERROR",
+  ];
 
   const addSubmission = (
     problemId: string,
     verdict: Verdict,
     createdAt: Date,
-    lang?: Language
+    lang?: Language,
   ) => {
     subCounter++;
     submissions.push({
@@ -1099,7 +1111,7 @@ Only consider alphanumeric characters, ignoring case.
       addSubmission(
         problemId,
         failStatuses[randInt(0, failStatuses.length - 1)],
-        daysAgo(dayOffset, randInt(1, 8))
+        daysAgo(dayOffset, randInt(1, 8)),
       );
     }
     addSubmission(problemId, "ACCEPTED", daysAgo(dayOffset, 0));
@@ -1116,7 +1128,7 @@ Only consider alphanumeric characters, ignoring case.
 
   // ── Phase 2: Days 31–180 — steady (1–3/day, ~70% active days) ────
   for (let day = 31; day <= 180; day++) {
-    if (Math.random() > 0.30) {
+    if (Math.random() > 0.3) {
       const count = randInt(1, 3);
       const shuffled = [...allProblems].sort(() => Math.random() - 0.5);
       for (let i = 0; i < count; i++) {
@@ -1127,7 +1139,7 @@ Only consider alphanumeric characters, ignoring case.
 
   // ── Phase 3: Days 181–365 — building (0–2/day, ~50% active days) ─
   for (let day = 181; day <= 365; day++) {
-    if (Math.random() > 0.50) {
+    if (Math.random() > 0.5) {
       const count = randInt(1, 2);
       const shuffled = [...allProblems].sort(() => Math.random() - 0.5);
       for (let i = 0; i < count; i++) {
@@ -1138,11 +1150,8 @@ Only consider alphanumeric characters, ignoring case.
 
   // ── Phase 4: Days 366–540 — early days (0–1/day, ~30% active) ────
   for (let day = 366; day <= 540; day++) {
-    if (Math.random() > 0.70) {
-      solveOnDay(
-        allProblems[randInt(0, allProblems.length - 1)].id,
-        day
-      );
+    if (Math.random() > 0.7) {
+      solveOnDay(allProblems[randInt(0, allProblems.length - 1)].id, day);
     }
   }
 
@@ -1163,9 +1172,11 @@ Only consider alphanumeric characters, ignoring case.
     });
   }
 
-  const acceptedCount = submissions.filter((s) => s.verdict === "ACCEPTED").length;
+  const acceptedCount = submissions.filter(
+    (s) => s.verdict === "ACCEPTED",
+  ).length;
   console.log(
-    `✅ Rohit Singh: ${submissions.length} total submissions, ${acceptedCount} accepted (≈ ${acceptedCount} problems solved across heatmap)`
+    `✅ Rohit Singh: ${submissions.length} total submissions, ${acceptedCount} accepted (≈ ${acceptedCount} problems solved across heatmap)`,
   );
 
   // ─── Rohit: Daily Activity (540 consecutive days — fully green heatmap) ─
@@ -1176,7 +1187,12 @@ Only consider alphanumeric characters, ignoring case.
   // Clear any existing daily activity for Rohit first
   await prisma.dailyActivity.deleteMany({ where: { userId: rohit.id } });
 
-  const dailyActivityData: { userId: string; date: Date; solvedCount: number; submissionCount: number }[] = [];
+  const dailyActivityData: {
+    userId: string;
+    date: Date;
+    solvedCount: number;
+    submissionCount: number;
+  }[] = [];
 
   for (let day = 0; day <= 540; day++) {
     const actDate = new Date(now);
@@ -1209,7 +1225,9 @@ Only consider alphanumeric characters, ignoring case.
   }
 
   await prisma.dailyActivity.createMany({ data: dailyActivityData });
-  console.log("✅ 541 daily activity records created (540-day unbroken streak)");
+  console.log(
+    "✅ 541 daily activity records created (540-day unbroken streak)",
+  );
 
   // ─── Rohit: Contest participations with top scores ────────────────
   // Give Rohit perfect scores on the live contest problems
@@ -1222,19 +1240,18 @@ Only consider alphanumeric characters, ignoring case.
   let rcs = 0;
   for (const rSub of rohitContestSubs) {
     rcs++;
-    await prisma.submission.upsert({
-      where: { id: `rohit-contest-live-${rcs}` },
-      update: {},
+    const rohit = await prisma.user.upsert({
+      where: { username: "rohitsingh" },
+      update: {
+        passwordHash: rohitPassword, // ← add this
+        email: "rohit.singh@example.com",
+        rating: 2847,
+      },
       create: {
-        id: `rohit-contest-live-${rcs}`,
-        userId: rohit.id,
-        problemId: rSub.problemId,
-        verdict: "ACCEPTED" as Verdict,
-        language: "CPP" as Language,
-        sourceCode: `// Rohit Singh - contest solve (${rSub.label})`,
-        executionTime: randInt(20, 120),
-        memoryUsed: randInt(10000, 30000),
-        createdAt: rSub.solvedAt,
+        username: "rohitsingh",
+        email: "rohit.singh@example.com",
+        passwordHash: rohitPassword,
+        rating: 2847,
       },
     });
   }
