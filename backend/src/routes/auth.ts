@@ -110,7 +110,7 @@ router.post(
       },
     });
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
@@ -228,10 +228,10 @@ router.post(
         .toLowerCase()
         .replace(/[^a-z0-9_]/g, "_")
         .slice(0, 20);
-      
+
       let username = baseUsername;
       let suffix = 1;
-      
+
       // Check for username uniqueness
       while (await prisma.user.findUnique({ where: { username } })) {
         username = `${baseUsername}${suffix}`;

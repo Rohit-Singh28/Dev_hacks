@@ -191,7 +191,7 @@ router.put(
   "/contests/:id",
   adminAuth,
   async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const existing = await prisma.contest.findUnique({ where: { id } });
     if (!existing) {
@@ -237,7 +237,7 @@ router.delete(
   "/contests/:id",
   adminAuth,
   async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const existing = await prisma.contest.findUnique({ where: { id } });
     if (!existing) {
@@ -257,7 +257,7 @@ router.post(
   adminAuth,
   validate(addProblemsSchema),
   async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { problems } = req.body;
 
     const existing = await prisma.contest.findUnique({ where: { id } });
@@ -305,7 +305,8 @@ router.delete(
   "/contests/:id/problems/:problemId",
   adminAuth,
   async (req: Request, res: Response): Promise<void> => {
-    const { id, problemId } = req.params;
+    const id = req.params.id as string;
+    const problemId = req.params.problemId as string;
 
     const cp = await prisma.contestProblem.findUnique({
       where: { contestId_problemId: { contestId: id, problemId } },

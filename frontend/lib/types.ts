@@ -202,6 +202,19 @@ export interface Room {
 
 export interface RoomProblem {
   id: string;
+  label: string;
+  points: number;
+  orderIdx: number;
+  problem: {
+    id: string;
+    title: string;
+    slug: string;
+    difficulty: string;
+  };
+}
+
+export interface RoomParticipantInfo {
+  id: string;
   userId: string;
   score: number;
   penalty: number;

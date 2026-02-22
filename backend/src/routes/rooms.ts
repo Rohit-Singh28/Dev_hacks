@@ -471,7 +471,15 @@ router.post(
 
     // Enqueue for judging (reuse existing submission queue)
     const { enqueueSubmission } = await import("../services/submissionQueue");
-    await enqueueSubmission(submission.id);
+    await enqueueSubmission({
+      submissionId: submission.id,
+      userId: req.user!.userId,
+      problemId,
+      contestId: null,
+      language,
+      sourceCode,
+      mode: "submit",
+    });
 
     res.status(201).json({ submissionId: submission.id });
   },

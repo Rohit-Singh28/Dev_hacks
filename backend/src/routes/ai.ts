@@ -123,7 +123,7 @@ router.get(
     "/chat/:problemId",
     async (req: Request, res: Response): Promise<void> => {
         try {
-            const problemId = req.params.problemId;
+            const problemId = req.params.problemId as string;
             const userId = req.user!.userId;
             const history = await getChatHistory(userId, problemId);
             res.json({ messages: history });
@@ -142,7 +142,7 @@ router.delete(
     "/chat/:problemId",
     async (req: Request, res: Response): Promise<void> => {
         try {
-            const problemId = req.params.problemId;
+            const problemId = req.params.problemId as string;
             const userId = req.user!.userId;
             await clearChatHistory(userId, problemId);
             res.json({ success: true });

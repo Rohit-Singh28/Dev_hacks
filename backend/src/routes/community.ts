@@ -68,7 +68,7 @@ router.get("/posts", optionalAuth, async (req: Request, res: Response): Promise<
 // Get single post
 router.get("/posts/:id", optionalAuth, async (req: Request, res: Response): Promise<void> => {
   const post = await prisma.post.findUnique({
-    where: { id: req.params.id },
+    where: { id: req.params.id as string },
     include: {
       author: { select: { id: true, username: true, avatarUrl: true, rating: true } },
       _count: { select: { comments: true, likes: true } },
@@ -130,7 +130,7 @@ router.post(
 
 // Delete post (author only)
 router.delete("/posts/:id", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const post = await prisma.post.findUnique({ where: { id: req.params.id } });
+  const post = await prisma.post.findUnique({ where: { id: req.params.id as string } });
 
   if (!post) {
     res.status(404).json({ error: "Post not found" });
@@ -142,13 +142,13 @@ router.delete("/posts/:id", authMiddleware, async (req: Request, res: Response):
     return;
   }
 
-  await prisma.post.delete({ where: { id: req.params.id } });
+  await prisma.post.delete({ where: { id: req.params.id as string } });
   res.json({ success: true });
 });
 
 // Like/unlike a post
 router.post("/posts/:id/like", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const postId = req.params.id;
+  const postId = req.params.id as string;
   const userId = req.user!.userId;
 
   const existingLike = await prisma.postLike.findUnique({
@@ -176,7 +176,7 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     const { content, parentId } = req.body;
 
-    const post = await prisma.post.findUnique({ where: { id: req.params.id } });
+    const post = await prisma.post.findUnique({ where: { id: req.params.id as string } });
     if (!post) {
       res.status(404).json({ error: "Post not found" });
       return;
@@ -185,7 +185,7 @@ router.post(
     // If parentId is provided, verify the parent comment exists
     if (parentId) {
       const parentComment = await prisma.comment.findUnique({ where: { id: parentId } });
-      if (!parentComment || parentComment.postId !== req.params.id) {
+      if (!parentComment || parentComment.postId !== (req.params.id as string)) {
         res.status(400).json({ error: "Invalid parent comment" });
         return;
       }
@@ -194,7 +194,7 @@ router.post(
     const comment = await prisma.comment.create({
       data: {
         content,
-        postId: req.params.id,
+        postId: req.params.id as string,
         authorId: req.user!.userId,
         parentId,
       },
@@ -209,7 +209,7 @@ router.post(
 
 // Delete comment (author only)
 router.delete("/comments/:id", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const comment = await prisma.comment.findUnique({ where: { id: req.params.id } });
+  const comment = await prisma.comment.findUnique({ where: { id: req.params.id as string } });
 
   if (!comment) {
     res.status(404).json({ error: "Comment not found" });
@@ -221,7 +221,7 @@ router.delete("/comments/:id", authMiddleware, async (req: Request, res: Respons
     return;
   }
 
-  await prisma.comment.delete({ where: { id: req.params.id } });
+  await prisma.comment.delete({ where: { id: req.params.id as string } });
   res.json({ success: true });
 });
 
@@ -230,7 +230,7 @@ router.delete("/comments/:id", authMiddleware, async (req: Request, res: Respons
 // Get editorials for a problem
 router.get("/editorials/problem/:problemId", optionalAuth, async (req: Request, res: Response): Promise<void> => {
   const editorials = await prisma.editorial.findMany({
-    where: { problemId: req.params.problemId },
+    where: { problemId: req.params.problemId as string },
     orderBy: { createdAt: "desc" },
     include: {
       author: { select: { id: true, username: true, avatarUrl: true, rating: true } },
@@ -312,7 +312,7 @@ router.get("/editorials", optionalAuth, async (req: Request, res: Response): Pro
 // Get single editorial
 router.get("/editorials/:id", optionalAuth, async (req: Request, res: Response): Promise<void> => {
   const editorial = await prisma.editorial.findUnique({
-    where: { id: req.params.id },
+    where: { id: req.params.id as string },
     include: {
       author: { select: { id: true, username: true, avatarUrl: true, rating: true } },
       problem: { select: { id: true, title: true, slug: true, difficulty: true } },
@@ -325,10 +325,10 @@ router.get("/editorials/:id", optionalAuth, async (req: Request, res: Response):
     return;
   }
 
-  const upvotes = editorial.votes.filter((v) => v.value === 1).length;
-  const downvotes = editorial.votes.filter((v) => v.value === -1).length;
+  const upvotes = (editorial as any).votes.filter((v: any) => v.value === 1).length;
+  const downvotes = (editorial as any).votes.filter((v: any) => v.value === -1).length;
   const userVote = req.user
-    ? editorial.votes.find((v) => v.userId === req.user!.userId)?.value || 0
+    ? (editorial as any).votes.find((v: any) => v.userId === req.user!.userId)?.value || 0
     : 0;
 
   res.json({
@@ -376,7 +376,7 @@ router.post(
 
 // Delete editorial (author only)
 router.delete("/editorials/:id", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const editorial = await prisma.editorial.findUnique({ where: { id: req.params.id } });
+  const editorial = await prisma.editorial.findUnique({ where: { id: req.params.id as string } });
 
   if (!editorial) {
     res.status(404).json({ error: "Editorial not found" });
@@ -388,13 +388,13 @@ router.delete("/editorials/:id", authMiddleware, async (req: Request, res: Respo
     return;
   }
 
-  await prisma.editorial.delete({ where: { id: req.params.id } });
+  await prisma.editorial.delete({ where: { id: req.params.id as string } });
   res.json({ success: true });
 });
 
 // Vote on editorial
 router.post("/editorials/:id/vote", authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  const editorialId = req.params.id;
+  const editorialId = req.params.id as string;
   const userId = req.user!.userId;
   const value = parseInt(req.body.value);
 
@@ -403,14 +403,14 @@ router.post("/editorials/:id/vote", authMiddleware, async (req: Request, res: Re
     return;
   }
 
-  const editorial = await prisma.editorial.findUnique({ where: { id: editorialId } });
+  const editorial = await prisma.editorial.findUnique({ where: { id: editorialId as string } });
   if (!editorial) {
     res.status(404).json({ error: "Editorial not found" });
     return;
   }
 
   const existingVote = await prisma.editorialVote.findUnique({
-    where: { editorialId_userId: { editorialId, userId } },
+    where: { editorialId_userId: { editorialId: editorialId as string, userId } },
   });
 
   if (value === 0) {
@@ -427,12 +427,12 @@ router.post("/editorials/:id/vote", authMiddleware, async (req: Request, res: Re
   } else {
     // Create vote
     await prisma.editorialVote.create({
-      data: { editorialId, userId, value },
+      data: { editorialId: editorialId as string, userId, value },
     });
   }
 
   // Get updated counts
-  const votes = await prisma.editorialVote.findMany({ where: { editorialId } });
+  const votes = await prisma.editorialVote.findMany({ where: { editorialId: editorialId as string } });
   const upvotes = votes.filter((v) => v.value === 1).length;
   const downvotes = votes.filter((v) => v.value === -1).length;
 
