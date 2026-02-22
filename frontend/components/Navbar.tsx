@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { useAuthStore } from "@/lib/authStore";
 import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/api";
@@ -291,7 +292,10 @@ export default function Navbar() {
 
               {/* Logout */}
               <button
-                onClick={logout}
+                onClick={async () => {
+                  await logout();
+                  await signOut({ redirect: false });
+                }}
                 className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300 transition-colors"
               >
                 Logout

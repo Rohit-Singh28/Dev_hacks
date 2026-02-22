@@ -181,13 +181,94 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, username: true, email: true, rating: true },
+      select: { id: true, username: true, email: true, rating: true, avatarUrl: true },
     });
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
     res.json({ user });
+  }
+);
+
+// ─── Google OAuth ────────────────────────────────────────────────────
+
+const googleSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  googleId: z.string(),
+  image: z.string().optional(),
+});
+
+router.post(
+  "/google",
+  validate(googleSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    const { email, name, googleId, image } = req.body;
+
+    // Check if user exists by googleId or email
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [{ googleId }, { email }],
+      },
+    });
+
+    if (user) {
+      // Update googleId if user exists by email but doesn't have googleId
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId, avatarUrl: image || user.avatarUrl },
+        });
+      }
+    } else {
+      // Create new user
+      // Generate a unique username from name or email
+      const baseUsername = (name || email.split("@")[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "_")
+        .slice(0, 20);
+      
+      let username = baseUsername;
+      let suffix = 1;
+      
+      // Check for username uniqueness
+      while (await prisma.user.findUnique({ where: { username } })) {
+        username = `${baseUsername}${suffix}`;
+        suffix++;
+      }
+
+      user = await prisma.user.create({
+        data: {
+          email,
+          username,
+          googleId,
+          avatarUrl: image,
+          passwordHash: null, // No password for Google users
+        },
+      });
+    }
+
+    const { sessionId, token } = await createSession(user);
+
+    // Set httpOnly session cookie
+    res.cookie("session_id", sessionId, {
+      httpOnly: true,
+      secure: config.env === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        rating: user.rating,
+        avatarUrl: user.avatarUrl,
+      },
+      token,
+    });
   }
 );
 

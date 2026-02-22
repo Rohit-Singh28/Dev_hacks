@@ -14,6 +14,7 @@ interface AuthState {
     email: string,
     password: string
   ) => Promise<void>;
+  loginWithGoogle: (backendUser: User, backendToken: string) => void;
   logout: () => Promise<void>;
   hydrate: () => void;
 }
@@ -43,6 +44,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     sessionStorage.setItem("token", data.token);
     sessionStorage.setItem("user", JSON.stringify(data.user));
     set({ user: data.user, token: data.token });
+  },
+
+  loginWithGoogle: (backendUser: User, backendToken: string) => {
+    sessionStorage.setItem("token", backendToken);
+    sessionStorage.setItem("user", JSON.stringify(backendUser));
+    set({ user: backendUser, token: backendToken, loading: false });
   },
 
   logout: async () => {
