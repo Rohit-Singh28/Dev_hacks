@@ -39,10 +39,12 @@ export default function Navbar() {
   const [streak, setStreak] = useState<number>(0);
 
   /* dropdown state */
-  const [openMenu, setOpenMenu] = useState<"practice" | "compete" | null>(null);
+  const [openMenu, setOpenMenu] = useState<
+    "practice" | "compete" | "host" | null
+  >(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const open = (menu: "practice" | "compete") => {
+  const open = (menu: "practice" | "compete" | "host") => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpenMenu(menu);
   };
@@ -234,6 +236,85 @@ export default function Navbar() {
                       </svg>
                     }
                     label="1v1 Duels"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Host */}
+          <div
+            className="relative"
+            onMouseEnter={() => open("host")}
+            onMouseLeave={scheduleClose}
+          >
+            <button
+              className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                openMenu === "host"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Room
+              <svg
+                className={`h-3.5 w-3.5 transition-transform ${openMenu === "host" ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {openMenu === "host" && (
+              <div
+                className="absolute left-1/2 top-full -translate-x-1/2 pt-2"
+                onMouseEnter={cancelClose}
+                onMouseLeave={scheduleClose}
+              >
+                <div className="w-56 rounded-xl border border-white/[0.08] bg-zinc-900/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                  <DropdownItem
+                    href="/host"
+                    icon={
+                      <svg
+                        className="h-4 w-4 text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    label="Host"
+                  />
+                  <DropdownItem
+                    href="/join"
+                    icon={
+                      <svg
+                        className="h-4 w-4 text-cyan-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+                        />
+                      </svg>
+                    }
+                    label="Join"
                   />
                 </div>
               </div>

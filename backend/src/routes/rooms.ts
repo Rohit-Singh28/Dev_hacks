@@ -20,7 +20,7 @@ const createRoomSchema = z.object({
   problemIds: z
     .array(z.string().uuid())
     .min(1, "Select at least 1 problem")
-    .max(4, "Maximum 4 problems allowed"),
+    .max(6, "Maximum 6 problems allowed"),
   duration: z.number().int().min(10).max(300).default(60), // 10min – 5hrs
 });
 
@@ -52,7 +52,7 @@ router.post(
       attempts++;
     }
 
-    const labels = ["A", "B", "C", "D"];
+    const labels = ["A", "B", "C", "D", "E", "F"];
 
     const room = await prisma.room.create({
       data: {
