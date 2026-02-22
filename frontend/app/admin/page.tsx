@@ -122,7 +122,7 @@ export default function AdminLoginPage() {
                 </form>
 
                 <p className="mt-6 text-center text-xs text-zinc-700">
-                    This page is for CodeArena administrators only.
+                    This page is for AlgoNexus administrators only.
                 </p>
             </div>
         </div>

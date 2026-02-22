@@ -78,7 +78,7 @@ export default function Navbar() {
         {/* ── LEFT: Logo ── */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <span className="text-xl font-bold tracking-tight text-zinc-100 group-hover:text-white transition-colors">
-            Code<span className="text-zinc-400">Arena</span>
+            Algo<span className="text-zinc-400">Nexus</span>
           </span>
         </Link>
 
@@ -92,8 +92,8 @@ export default function Navbar() {
           >
             <button
               className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${openMenu === "practice"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-white/[0.08] text-white"
+                : "text-zinc-400 hover:text-zinc-200"
                 }`}
             >
               Practice
@@ -170,8 +170,8 @@ export default function Navbar() {
           >
             <button
               className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${openMenu === "compete"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-white/[0.08] text-white"
+                : "text-zinc-400 hover:text-zinc-200"
                 }`}
             >
               Compete
@@ -248,8 +248,8 @@ export default function Navbar() {
           >
             <button
               className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${openMenu === "host"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-white/[0.08] text-white"
+                : "text-zinc-400 hover:text-zinc-200"
                 }`}
             >
               Room

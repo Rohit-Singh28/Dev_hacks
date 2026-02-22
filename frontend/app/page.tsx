@@ -353,6 +353,33 @@ export default function Home() {
 
       <div className="relative z-10">
         {/* ════════════════════════════════════════
+            HERO NAVBAR
+        ════════════════════════════════════════ */}
+        <nav className="sticky top-0 z-50 border-b border-[#494848] bg-[#0e0e0e]/95 backdrop-blur-xl">
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <span className="text-xl font-bold tracking-tight text-zinc-100 group-hover:text-white transition-colors">
+                Algo<span className="text-zinc-400">Nexus</span>
+              </span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="rounded-lg px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-1.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:brightness-110 transition-all"
+              >
+                Sign up
+              </Link>
+            </div>
+          </div>
+        </nav>
+
+        {/* ════════════════════════════════════════
             HERO
         ════════════════════════════════════════ */}
         <section className="mx-auto  px-8 pt-20 pb-16 lg:px-28">
@@ -506,7 +533,7 @@ export default function Home() {
               Ready to compete?
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-zinc-500">
-              Join 98,000+ developers on CodeArena. Your next rating
+              Join 98,000+ developers on AlgoNexus. Your next rating
               breakthrough is one arena away.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -532,7 +559,7 @@ export default function Home() {
         <footer className="border-t border-white/[0.05]">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-8 py-8 sm:flex-row lg:px-16">
             <span className="font-mono text-sm font-bold tracking-tight text-zinc-100">
-              CODE<span className="text-zinc-500">ARENA</span>
+              ALGO<span className="text-zinc-500">NEXUS</span>
             </span>
             <div className="flex flex-wrap items-center gap-6">
               {["Problems", "Contests", "Leaderboard", "Blog", "GitHub"].map(
@@ -548,7 +575,7 @@ export default function Home() {
               )}
             </div>
             <p className="text-xs text-zinc-700">
-              © {new Date().getFullYear()} CODEARENA
+              © {new Date().getFullYear()} ALGONEXUS
             </p>
           </div>
         </footer>

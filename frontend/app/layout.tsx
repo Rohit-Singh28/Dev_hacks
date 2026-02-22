@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CodeArena - Real-Time Competitive Programming",
+  title: "AlgoNexus - Real-Time Competitive Programming",
   description:
     "Sharpen your skills on real-time contests with multi-language support, instant verdicts, and a global leaderboard.",
   generator: "v0.app",

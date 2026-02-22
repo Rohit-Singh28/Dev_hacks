@@ -75,7 +75,7 @@ function buildProblemContext(problem: ProblemContext): string {
 
 // ─── Chatbot ─────────────────────────────────────────────────────────
 
-const CHATBOT_SYSTEM_PROMPT = `You are CodeArena AI, a helpful coding assistant embedded in a competitive programming platform.
+const CHATBOT_SYSTEM_PROMPT = `You are AlgoNexus AI, a helpful coding assistant embedded in a competitive programming platform.
 
 RULES:
 - You are helping a user who is working on a specific coding problem (details provided below).
@@ -139,7 +139,7 @@ interface ReviewRequest {
 function buildReviewPrompt(req: ReviewRequest): string {
     const isCorrect = req.verdict === "ACCEPTED";
 
-    let prompt = `You are CodeArena AI, an expert code reviewer on a competitive programming platform.\n\n`;
+    let prompt = `You are AlgoNexus AI, an expert code reviewer on a competitive programming platform.\n\n`;
     prompt += buildProblemContext(req.problem);
     prompt += `\n---\n\n`;
     prompt += `**User's Code (${req.language}):**\n\`\`\`${req.language.toLowerCase()}\n${req.code}\n\`\`\`\n\n`;

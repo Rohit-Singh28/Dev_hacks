@@ -101,7 +101,7 @@ startContestStatusWorker();
 server.listen(config.port, () => {
   console.log(`
 ╔══════════════════════════════════════════╗
-║  🚀 CodeArena Backend                    ║
+║  🚀 AlgoNexus Backend                    ║
 ║  Port: ${config.port}                            ║
 ║  Env:  ${config.env}                    ║
 ╚══════════════════════════════════════════╝

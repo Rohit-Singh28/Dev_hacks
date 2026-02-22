@@ -57,7 +57,7 @@ export default function LoginPage() {
           <div className="mb-10 text-center">
             <Link href="/" className="inline-block">
               <span className="font-mono text-lg font-bold tracking-tight">
-                CODE<span className="text-zinc-500">ARENA</span>
+                ALGO<span className="text-zinc-500">NEXUS</span>
               </span>
             </Link>
           </div>
