@@ -22,7 +22,6 @@ import roomRoutes from "./routes/rooms";
 import aiRoutes from "./routes/ai";
 import roadmapRoutes from "./routes/roadmap";
 import adminRoutes from "./routes/admin";
-import weeklyContestRoutes from "./routes/weeklyContests";
 
 const app = express();
 const server = http.createServer(app);
@@ -84,7 +83,6 @@ app.use("/api/rooms", roomRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/roadmap", roadmapRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/weekly-contests", weeklyContestRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────────
 

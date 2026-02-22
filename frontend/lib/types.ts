@@ -202,19 +202,6 @@ export interface Room {
 
 export interface RoomProblem {
   id: string;
-  label: string;
-  points: number;
-  orderIdx: number;
-  problem: {
-    id: string;
-    title: string;
-    slug: string;
-    difficulty: string;
-  };
-}
-
-export interface RoomParticipantInfo {
-  id: string;
   userId: string;
   score: number;
   penalty: number;
@@ -275,20 +262,4 @@ export interface RoadmapLeaderboardEntry {
   solvedCount: number;
   currentLevel: number;
   badge: RoadmapBadge;
-}
-
-// ─── Weekly Contest Types ────────────────────────────────────────────
-
-export interface WeeklyContest {
-  id: string;
-  title: string;
-  slug: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  difficulty: "EASY" | "MEDIUM" | "HARD";
-  prizes?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

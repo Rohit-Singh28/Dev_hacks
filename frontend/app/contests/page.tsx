@@ -3,13 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Contest, WeeklyContest } from "@/lib/types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import type { Contest } from "@/lib/types";
 
 export default function ContestsPage() {
   const [contests, setContests] = useState<Contest[]>([]);
-  const [weeklyContests, setWeeklyContests] = useState<WeeklyContest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
@@ -19,13 +16,8 @@ export default function ContestsPage() {
         const params: any = {};
         if (filter !== "ALL") params.status = filter;
 
-        const [contestsRes, weeklyRes] = await Promise.all([
-          api.get("/contests", { params }),
-          fetch(`${API_BASE}/api/weekly-contests`).then((r) => r.json()),
-        ]);
-
+        const contestsRes = await api.get("/contests", { params });
         setContests(contestsRes.data.contests);
-        setWeeklyContests(weeklyRes.contests || []);
       } catch (err) {
         console.error("Failed to fetch contests:", err);
       } finally {
@@ -54,18 +46,6 @@ export default function ContestsPage() {
       dot: "bg-zinc-600",
       label: "Ended",
     },
-  };
-
-  const diffColor: Record<string, string> = {
-    EASY: "from-emerald-600/20 via-emerald-500/10",
-    MEDIUM: "from-amber-600/20 via-amber-500/10",
-    HARD: "from-red-600/20 via-red-500/10",
-  };
-
-  const diffBadge: Record<string, string> = {
-    EASY: "bg-emerald-900/60 text-emerald-400 border-emerald-700/50",
-    MEDIUM: "bg-amber-900/60 text-amber-400 border-amber-700/50",
-    HARD: "bg-red-900/60 text-red-400 border-red-700/50",
   };
 
   return (
@@ -100,10 +80,11 @@ export default function ContestsPage() {
               <button
                 key={s}
                 onClick={() => setFilter(s)}
-                className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${filter === s
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
+                  filter === s
                     ? "bg-white/[0.08] text-zinc-100"
                     : "text-zinc-500 hover:text-zinc-300"
-                  }`}
+                }`}
               >
                 {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
               </button>
@@ -111,135 +92,15 @@ export default function ContestsPage() {
           </div>
         </div>
 
-        {/* ── WEEKLY CONTESTS SECTION ── */}
-        {weeklyContests.length > 0 && (
-          <div className="mb-8">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
-              </span>
-              <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-500/80 font-semibold">
-                Weekly Contests
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {weeklyContests.map((wc) => {
-                const now = new Date();
-                const end = new Date(wc.endDate);
-                const daysLeft = Math.max(
-                  0,
-                  Math.ceil(
-                    (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-                  )
-                );
-                const gradient = diffColor[wc.difficulty] || diffColor.MEDIUM;
-                const badge = diffBadge[wc.difficulty] || diffBadge.MEDIUM;
-
-                return (
-                  <div
-                    key={wc.id}
-                    className={`relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-r ${gradient} to-transparent p-6 transition-all hover:border-white/[0.14] shadow-lg`}
-                  >
-                    {/* Animated background */}
-                    <div className="absolute inset-0 opacity-30 pointer-events-none">
-                      <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white/[0.03] animate-pulse" />
-                    </div>
-
-                    <div className="relative">
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h2 className="text-base font-semibold text-zinc-100">
-                            {wc.title}
-                          </h2>
-                          <span
-                            className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] font-semibold border ${badge}`}
-                          >
-                            {wc.difficulty}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-900/40 border border-amber-800/50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
-                            <svg
-                              className="h-3 w-3"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            Weekly
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      {wc.description && (
-                        <p className="text-sm text-zinc-500 mb-3 line-clamp-2">
-                          {wc.description}
-                        </p>
-                      )}
-
-                      {/* Meta */}
-                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[11px] text-zinc-600">
-                        <span className="flex items-center gap-1.5">
-                          <svg
-                            className="h-3 w-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          {new Date(wc.startDate).toLocaleString()}
-                        </span>
-                        <span className="text-zinc-800">→</span>
-                        <span>{new Date(wc.endDate).toLocaleString()}</span>
-                        <span className="ml-auto flex items-center gap-1.5 text-amber-500/80">
-                          ⏳ {daysLeft} day{daysLeft !== 1 ? "s" : ""} left
-                        </span>
-                        {wc.prizes && (
-                          <span className="flex items-center gap-1.5 text-amber-500/80">
-                            🏆 {wc.prizes}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Divider */}
-            <div className="mt-8 mb-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/[0.06]" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-700">
-                Platform Contests
-              </span>
-              <div className="h-px flex-1 bg-white/[0.06]" />
-            </div>
-          </div>
-        )}
-
-        {/* ── REGULAR CONTESTS ── */}
+        {/* ── CONTESTS ── */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-700 border-t-zinc-300" />
           </div>
-        ) : contests.length === 0 && weeklyContests.length === 0 ? (
+        ) : contests.length === 0 ? (
           <div className="flex items-center justify-center py-20">
             <p className="font-mono text-xs text-zinc-700">
               No contests found.
-            </p>
-          </div>
-        ) : contests.length === 0 ? (
-          <div className="flex items-center justify-center py-10">
-            <p className="font-mono text-xs text-zinc-700">
-              No platform contests found.
             </p>
           </div>
         ) : (

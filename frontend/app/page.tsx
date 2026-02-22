@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import WeeklyContestBanner from "@/components/WeeklyContestBanner";
 /* ─────────────────────────────────────────────
    Types
 ───────────────────────────────────────────── */
@@ -417,13 +416,6 @@ export default function Home() {
               <ProblemsPanel />
             </div>
           </div>
-        </section>
-
-        {/* ════════════════════════════════════════
-            WEEKLY CONTESTS BANNER
-        ════════════════════════════════════════ */}
-        <section className="mx-auto max-w-7xl px-8 pb-8 lg:px-16">
-          <WeeklyContestBanner />
         </section>
 
         <div className="border-t border-white/[0.05]" />
