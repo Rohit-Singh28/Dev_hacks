@@ -23,6 +23,7 @@ import aiRoutes from "./routes/ai";
 import roadmapRoutes from "./routes/roadmap";
 import adminRoutes from "./routes/admin";
 import weeklyContestRoutes from "./routes/weeklyContests";
+import communityRoutes from "./routes/community";
 
 const app = express();
 const server = http.createServer(app);
@@ -85,6 +86,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/roadmap", roadmapRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/weekly-contests", weeklyContestRoutes);
+app.use("/api/community", communityRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────────
 

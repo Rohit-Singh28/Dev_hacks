@@ -27,6 +27,11 @@ model User {
     dailyActivities     DailyActivity[]
     hostedRooms         Room[]               @relation("RoomHost")
     roomParticipants    RoomParticipant[]
+    posts               Post[]
+    comments            Comment[]
+    postLikes           PostLike[]
+    editorials          Editorial[]
+    editorialVotes      EditorialVote[]
 
     @@index([username])
     @@index([email])
@@ -86,6 +91,7 @@ model Problem {
     roomProblems    RoomProblem[]
     bookmarks       Bookmark[]
     hints           Hint[]
+    editorials      Editorial[]
 
     @@index([slug])
     @@index([difficulty])
@@ -460,4 +466,97 @@ model WeeklyContest {
     @@index([isActive, startDate, endDate])
     @@index([slug])
     @@map("weekly_contests")
+}
+
+// ─── Community Posts ─────────────────────────────────────────────────
+
+model Post {
+    id        String   @id @default(uuid())
+    authorId  String   @map("author_id")
+    title     String
+    content   String   @db.Text
+    tags      String?  // comma-separated tags
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    comments Comment[]
+    likes    PostLike[]
+
+    @@index([authorId])
+    @@index([createdAt])
+    @@map("posts")
+}
+
+model Comment {
+    id        String   @id @default(uuid())
+    postId    String   @map("post_id")
+    authorId  String   @map("author_id")
+    content   String   @db.Text
+    parentId  String?  @map("parent_id") // for nested replies
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+    author  User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+    replies Comment[] @relation("CommentReplies")
+
+    @@index([postId])
+    @@index([authorId])
+    @@index([parentId])
+    @@map("comments")
+}
+
+model PostLike {
+    id        String   @id @default(uuid())
+    postId    String   @map("post_id")
+    userId    String   @map("user_id")
+    createdAt DateTime @default(now()) @map("created_at")
+
+    post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([postId, userId])
+    @@index([postId])
+    @@index([userId])
+    @@map("post_likes")
+}
+
+// ─── Community Editorials ────────────────────────────────────────────
+
+model Editorial {
+    id        String   @id @default(uuid())
+    problemId String   @map("problem_id")
+    authorId  String   @map("author_id")
+    title     String
+    content   String   @db.LongText
+    language  String?  // optional: language used in solution
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    problem Problem         @relation(fields: [problemId], references: [id], onDelete: Cascade)
+    author  User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    votes   EditorialVote[]
+
+    @@index([problemId])
+    @@index([authorId])
+    @@index([createdAt])
+    @@map("editorials")
+}
+
+model EditorialVote {
+    id          String   @id @default(uuid())
+    editorialId String   @map("editorial_id")
+    userId      String   @map("user_id")
+    value       Int      // 1 for upvote, -1 for downvote
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    editorial Editorial @relation(fields: [editorialId], references: [id], onDelete: Cascade)
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([editorialId, userId])
+    @@index([editorialId])
+    @@index([userId])
+    @@map("editorial_votes")
 }
