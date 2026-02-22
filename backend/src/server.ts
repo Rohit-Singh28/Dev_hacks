@@ -22,6 +22,8 @@ import roomRoutes from "./routes/rooms";
 import aiRoutes from "./routes/ai";
 import roadmapRoutes from "./routes/roadmap";
 import adminRoutes from "./routes/admin";
+import weeklyContestRoutes from "./routes/weeklyContests";
+import communityRoutes from "./routes/community"; // ⚠️ file was missing in both branches — add this route file
 
 const app = express();
 const server = http.createServer(app);
@@ -83,6 +85,8 @@ app.use("/api/rooms", roomRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/roadmap", roadmapRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/weekly-contests", weeklyContestRoutes);
+app.use("/api/community", communityRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────────
 
